@@ -1,0 +1,18 @@
+{
+  "name": "clutter",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "sirkorgo",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@material/web": "^2.4.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "uuid": "^14.0.1"
+  }
+}

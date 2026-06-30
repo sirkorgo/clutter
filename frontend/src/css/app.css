@@ -1,0 +1,69 @@
+/* Header */
+header {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+    background-color: var(--md-sys-color-surface);
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* Content */
+.content-area {
+    padding: 2rem;
+    flex: 1;
+}
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+.card {
+    background-color: var(--md-sys-color-surface-container);
+    border-radius: 15px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), 0 1px 3px 1px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 4px 8px 2px rgba(0, 0, 0, 0.12);
+}
+
+.card .task-title {
+    font-weight: 500;
+    margin: 0;
+}
+
+.task-card .task-meta {
+    font-size: 0.85rem;
+    color: var(--secondary-font-color);
+}
