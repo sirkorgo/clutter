@@ -12,6 +12,21 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const { encrypt } = require('./utils/crypto');
 
+function requireAuth(req, res, next) {
+    console.log('Headers received:', req.headers);
+    const userEmail = req.headers['x-forwarded-email'];
+    
+    if (!userEmail) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    req.userEmail = userEmail;
+    next();
+}
+
+
+app.use('/api/userdata', requireAuth)
+
 // Helper functions (before routes)
 async function getUser(userEmail) {
     const indexPath = path.join(__dirname, 'userdata', 'index.json');
@@ -60,7 +75,7 @@ async function initUser(userEmail) {
 
 // Userdata API
 app.post('/api/userdata/getUserId', async (req, res) => {
-  const userEmail = req.headers['x-user-email'];
+  const userEmail = req.userEmail;
   const userId = await getUser(userEmail);
   res.json({ userId });
 });
@@ -68,7 +83,7 @@ app.post('/api/userdata/getUserId', async (req, res) => {
 // Tasks API
 app.get('/api/userdata/tasks', async (req, res) => {
     // Get user generated task
-    const userEmail = req.headers['x-user-email'];
+    const userEmail = req.userEmail;
     const userId = await getUser(userEmail);
     
     const tasksPath = path.join(__dirname, 'userdata', userId, 'tasks.json');
@@ -80,7 +95,7 @@ app.get('/api/userdata/tasks', async (req, res) => {
 
 app.post('/api/userdata/tasks', async (req, res) => {
     // Upload new user task
-    const userEmail = req.headers['x-user-email'];
+    const userEmail = req.userEmail;
     const userId = await getUser(userEmail);
 
     const tasksPath = path.join(__dirname, 'userdata', userId, 'tasks.json');
@@ -104,7 +119,7 @@ app.post('/api/userdata/tasks', async (req, res) => {
 // Guides API
 app.get('/api/userdata/guides', async (req, res) => {
     // Get user guides
-    const userEmail = req.headers['x-user-email'];
+    const userEmail = req.userEmail;
     const userId = await getUser(userEmail);
     
     const guidesPath = path.join(__dirname, 'userdata', userId, 'guides.json');
@@ -115,7 +130,7 @@ app.get('/api/userdata/guides', async (req, res) => {
 });
 
 app.post('/api/userdata/guides', async (req, res) => {
-    const userEmail = req.headers['x-user-email'];
+    const userEmail = req.userEmail;
     const userId = await getUser(userEmail);
 
     const guidesPath = path.join(__dirname, 'userdata', userId, 'guides.json');

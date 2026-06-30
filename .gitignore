@@ -1,3 +1,6 @@
+userdata/*
+!userdata/.gitkeep
+
 # Logs
 logs
 *.log

@@ -1,3 +1,13 @@
+// Backend connections
+async function getUserId() {
+    const response = await fetch('/api/userdata/getUserId', {
+        method: 'POST'
+    })
+    const data = await response.json()
+    return data.userId
+}
+
+// Page handling
 document.addEventListener("DOMContentLoaded", () => {
    showPage()
 });
