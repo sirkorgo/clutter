@@ -5,7 +5,7 @@ app.use(express.json());
 app.use('/node_modules', express.static('node_modules'));
 app.use(express.static('frontend'));
 const crypto = require('crypto')
-// require('dotenv').config();
+require('dotenv').config();
 
 function genId() {
     return crypto.randomBytes(4).toString('hex')
@@ -15,7 +15,7 @@ function genId() {
 const fs = require('fs').promises;
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { encrypt } = require('./utils/crypto');
+const { encrypt, decrypt } = require('./utils/crypto');
 
 function requireAuth(req, res, next) {
     const userEmail = req.headers['x-forwarded-email'];
@@ -84,7 +84,10 @@ async function initUser(userEmail) {
             canvas: true,
             clutter: true
         },
-        canvasApiKey: ''
+        canvas: {
+            apiKey: "",
+            iv: ""
+        }
     }, null, 2), 'utf8');
 
     return userId;
@@ -104,9 +107,42 @@ app.get('/api/userdata/settings', async (req, res) => {
     const settingsPath = path.join(__dirname, 'userdata', userId, 'settings.json');
     const data = await fs.readFile(settingsPath, 'utf8');
     const prefs = JSON.parse(data);
+    
+    const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex')
+    const canvasAPIKey = decrypt(prefs.canvas.apiKey, prefs.canvas.iv, key)
 
-    res.json(prefs);
+    const decryptedPrefs = { 
+            ...prefs,
+            canvas: { apiKey: canvasAPIKey }
+        }
+
+    res.json(decryptedPrefs);
 });
+
+app.patch('/api/userdata/settings', async (req, res) => {
+        const userEmail = req.userEmail;
+        const userId = await getUser(userEmail);
+
+        const settingsPath = path.join(__dirname, 'userdata', userId, 'settings.json');
+        const data = await fs.readFile(settingsPath, 'utf8');
+        const prefs = JSON.parse(data);
+
+        if (req.body.canvas?.apiKey) {
+            const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex')
+            const { encrypted, iv } = encrypt(req.body.canvas.apiKey, key)
+
+            req.body.canvas.apiKey = encrypted
+            req.body.canvas.iv = iv
+        }
+
+        const newPrefs = { 
+            ...prefs, 
+            ...req.body,
+            canvas: { ...prefs.canvas, ...req.body.canvas }
+        }
+        await fs.writeFile(settingsPath, JSON.stringify(newPrefs, null, 2), 'utf8')
+        return res.json({status:'ok'})
+})
 
 // Tasks API
 app.get('/api/userdata/tasks', async (req, res) => {

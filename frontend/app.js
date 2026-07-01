@@ -117,23 +117,31 @@ document.addEventListener("DOMContentLoaded", () => {
         menu.open = !menu.open
     })
 
-    const nickname = document.querySelector('#settings-nickname') 
-    const email = document.querySelector('#settings-email')
-    const theme = document.querySelector('#settings-theme')
-    const taskFilters = {
-        undone: document.querySelector('#pref-undone'), 
-        done: document.querySelector('#pref-done'), 
-        clutter: document.querySelector('#pref-clutter'),
-        canvas: document.querySelector('#pref-canvas')
-    }
-    const pref_canvas_key = document.querySelector('pref-canvas-key')
+    document.querySelector('#settings-btn').addEventListener('click', () => {        
+        getSettings().then(settings => {
+            const nickname = document.querySelector('#settings-nickname') 
+            const email = document.querySelector('#settings-email')
+            const theme = document.querySelector('#settings-theme')
+            const taskFilters = {
+                undone: document.querySelector('#pref-undone'), 
+                done: document.querySelector('#pref-done'), 
+                clutter: document.querySelector('#pref-clutter'),
+                canvas: document.querySelector('#pref-canvas')
+            }
+            const pref_canvas_key = document.querySelector('#pref-canvas-key')
 
-    document.querySelector('#settings-btn').addEventListener('click', () => {
-        document.querySelector('#settings-modal').show()
-        const settings = getSettings()
-        nickname.attributes.value = settings.name
+            nickname.value = settings.nickname
+            email.value = settings.email
+            theme.selected = settings.theme === 'dark'
+            pref_canvas_key.value = settings.canvas.apiKey
 
-
+            taskFilters.undone.selected = settings.defaultFilters.undone === true
+            taskFilters.done.selected = settings.defaultFilters.done === true
+            taskFilters.canvas.selected = settings.defaultFilters.canvas === true
+            taskFilters.clutter.selected = settings.defaultFilters.clutter === true
+            
+            document.querySelector('#settings-modal').show()
+    })
     })
 
     document.querySelector('#settings-close').addEventListener('click', () => {
@@ -219,8 +227,8 @@ async function runPageScripts(hash) {
         const settings = await getSettings()
         const filters = settings.defaultFilters
 
-        document.querySelector('[label="Incomplete"]').selected = filters.incomplete
-        document.querySelector('[label="Completed"]').selected = filters.completed
+        document.querySelector('[label="Incomplete"]').selected = filters.undone
+        document.querySelector('[label="Completed"]').selected = filters.done
         document.querySelector('[label="Canvas"]').selected = filters.canvas
         document.querySelector('[label="Clutter"]').selected = filters.clutter
 
@@ -268,9 +276,41 @@ document.querySelector('.content-area').addEventListener('click', (event) => {
     setTimeout(() => renderTasks(), 50)
 })
 
-async function getSettings() {
-    const res = await fetch('/api/userdata/settings')
-    const data = await res.json()
-    return data
+document.querySelector('#settings-modal').addEventListener('focusout', (event) => {
+    if (event.target.tagName !== 'MD-OUTLINED-TEXT-FIELD') return
 
-}
+    const field = event.target.dataset.field
+    const value = event.target.value
+
+    let body
+    if (field === 'canvas.apiKey') {
+        body = { canvas: { apiKey: value } }
+    } else {
+        body = { [field]: value }
+    }
+
+    fetch('/api/userdata/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+
+})
+
+document.querySelector('#settings-modal').addEventListener('change', (event) => {
+    if (event.target.tagName !== 'MD-SWITCH') return
+
+    const selected = event.target.selected
+
+    let body
+    if (event.target.selected === true) {
+        body = { theme: 'dark'}
+    } else body = { theme: 'light'}
+
+    fetch('/api/userdata/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+
+})

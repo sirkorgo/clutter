@@ -93,8 +93,8 @@
         
         <!-- Profile -->
         <h3 class="settings-section">Profile</h3>
-        <md-outlined-text-field id="settings-nickname" label="Nickname" style="width: 100%;"></md-outlined-text-field>
-        <md-outlined-text-field id="settings-email" label="Email" readonly style="width: 100%;"></md-outlined-text-field>
+        <md-outlined-text-field  data-field="nickname" id="settings-nickname" label="Nickname" style="width: 100%;"></md-outlined-text-field>
+        <md-outlined-text-field  id="settings-email" label="Email" readonly style="width: 100%;"></md-outlined-text-field>
 
         <md-divider style="margin: 16px 0;"></md-divider>
 
@@ -119,10 +119,7 @@
         <!-- Integrations -->
         <h3 class="settings-section">Integrations</h3>
         <div style="display: flex; gap: 8px; align-items: center;">
-            <md-outlined-text-field id="pref-canvas-key" label="Canvas API Key" type="password" style="flex: 1;"></md-outlined-text-field>
-            <md-icon-button id="toggle-canvas-key">
-                <md-icon>visibility</md-icon>
-            </md-icon-button>
+            <md-outlined-text-field data-field="canvas.apiKey" id="pref-canvas-key" label="Canvas API Key" type="password" style="flex: 1;"></md-outlined-text-field>
         </div>
 
     </div>

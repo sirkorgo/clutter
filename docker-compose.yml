@@ -26,6 +26,8 @@ services:
 
   clutter-app:
     container_name: clutter
+    env_file:
+      - .env
     build: .
     restart: unless-stopped
     volumes:
