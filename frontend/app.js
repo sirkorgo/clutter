@@ -1,57 +1,55 @@
-
-// API
-
+// API Endpoints
 async function getUserId() {
-    const response = await fetch('/api/userdata/getUserId', { method: 'POST' })
+    const response = await fetch('/api/userdata/getUserId', {
+        method: 'POST'
+    })
     const data = await response.json()
     return data.userId
 }
 
-async function getSettings() {
-    const response = await fetch('/api/userdata/settings')
-    const data = await response.json()
-    return data
-}
-
 async function getTasks() {
-    const response = await fetch('/api/userdata/tasks', { method: 'GET' })
-    const data = await response.json()
-    return data
-}
+    const response = await fetch('/api/userdata/tasks', {
+        method: 'GET'
+    }); 
+    const data = await response.json();
+    return data;
+};
 
+let taskToDelete = null
 
-
-// TASKS
-
+// Content Functions
 async function renderTasks() {
-    const taskData = await getTasks()
+    const taskData = await getTasks();
 
     taskData.sort((a, b) => {
-        if (!a.due) return 1
-        if (!b.due) return -1
-        return new Date(a.due) - new Date(b.due)
+        if (!a.due) return 1   // no due date → push to bottom
+        if (!b.due) return -1  // no due date → push to bottom
+        return new Date(a.due) - new Date(b.due)  // earlier date first
     })
 
-    const taskList = document.querySelector('#taskList')
+    const taskList = document.querySelector("#taskList");
 
-    const filters = {
-        notdone: document.querySelector('[label="Incomplete"]').selected,
-        done: document.querySelector('[label="Completed"]').selected,
-        canvas: document.querySelector('[label="Canvas"]').selected,
-        local: document.querySelector('[label="Clutter"]').selected
-    }
+            const filters = {
+            notdone: document.querySelector('[label="Incomplete"]').selected,
+            done: document.querySelector('[label="Completed"]').selected,
+            canvas: document.querySelector('[label="Canvas"]').selected,
+            local: document.querySelector('[label="Clutter"]').selected
+        }
 
-    const anyFilterActive = filters.notdone || filters.done || filters.local || filters.canvas
-
+        const anyFilterActive = filters.notdone || filters.done || filters.local || filters.canvas
+    
     taskList.innerHTML = ''
     for (let task of taskData) {
+
         if (anyFilterActive) {
+            // Layer 1: type
             const typeFilterActive = filters.canvas || filters.local
             if (typeFilterActive) {
                 const matchesType = (filters.local && !task.canvas) || (filters.canvas && task.canvas)
                 if (!matchesType) continue
             }
 
+            // Layer 2: status
             const statusFilterActive = filters.notdone || filters.done
             if (statusFilterActive) {
                 const matchesStatus = (filters.notdone && !task.done) || (filters.done && task.done)
@@ -59,7 +57,7 @@ async function renderTasks() {
             }
         }
 
-        const renderedTask =
+        const renderedTask = 
             `<div class="card" data-id="${task.id}">
                 <md-checkbox ${task.done ? 'checked' : ''}></md-checkbox>
                 <div class="task-info">
@@ -77,9 +75,9 @@ async function renderTasks() {
                     <md-icon>delete</md-icon>
                 </md-icon-button>
             </div>`
-        taskList.insertAdjacentHTML('beforeend', renderedTask)
+        taskList.insertAdjacentHTML('beforeend', renderedTask);
     }
-}
+};
 
 async function createNewTask() {
     if (isCreatingTask) return
@@ -91,35 +89,134 @@ async function createNewTask() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({})
         })
+
         await renderTasks()
-    } catch (err) {
+    } catch(err) {
         console.error('createNewTask error:', err)
     }
 
     isCreatingTask = false
 }
 
+async function sendNewTask() {
+    const newTask = document.querySelector('#newTaskCard')
+}
 
-
-// NAVIGATION
-
+// Frontend
 let tabs
 let isCreatingTask = false
 
+document.addEventListener("DOMContentLoaded", () => {
+    getSettings().then(settings => {
+        document.querySelector('#account-info div').innerHTML = 
+            `${settings.nickname}<br><small>${settings.email}</small>`
+    })
+
+    document.querySelector('#account-btn').addEventListener('click', () => {
+        const menu = document.querySelector('#account-menu')
+        menu.open = !menu.open
+    })
+
+    document.querySelector('#settings-btn').addEventListener('click', () => {        
+        getSettings().then(settings => {
+            const nickname = document.querySelector('#settings-nickname') 
+            const email = document.querySelector('#settings-email')
+            const theme = document.querySelector('#settings-theme')
+            const taskFilters = {
+                undone: document.querySelector('#pref-undone'), 
+                done: document.querySelector('#pref-done'), 
+                clutter: document.querySelector('#pref-clutter'),
+                canvas: document.querySelector('#pref-canvas')
+            }
+            const pref_canvas_key = document.querySelector('#pref-canvas-key')
+
+            nickname.value = settings.nickname
+            email.value = settings.email
+            theme.selected = settings.theme === 'dark'
+            pref_canvas_key.value = settings.canvas.apiKey
+
+            taskFilters.undone.selected = settings.defaultFilters.undone === true
+            taskFilters.done.selected = settings.defaultFilters.done === true
+            taskFilters.canvas.selected = settings.defaultFilters.canvas === true
+            taskFilters.clutter.selected = settings.defaultFilters.clutter === true
+            
+            document.querySelector('#settings-modal').show()
+    })
+    })
+
+    document.querySelector('#settings-close').addEventListener('click', () => {
+        document.querySelector('#settings-modal').close()
+    })
+
+    document.querySelector('#signout-btn').addEventListener('click', () => {
+        window.location.href = '/oauth2/sign_out'
+    })
+
+    tabs = document.querySelector('md-tabs')
+    tabs.addEventListener('change', () => {
+        let pgNames = ["summary", "tasks", "guides"]
+        let active = tabs.activeTabIndex
+        let name = pgNames[active]
+        if (window.location.hash !== `#${name}`) {
+            window.location.hash = name
+        }
+    })
+    showPage()
+
+        document.querySelector('#new-task-btn').addEventListener('click', () => {
+            createNewTask()
+        })
+
+        document.querySelector('#taskList').addEventListener('click', (event) => {
+        const deleteBtn = event.target.closest('.delete-btn')
+        if (!deleteBtn) return
+
+        const card = deleteBtn.closest('.card')
+        taskToDelete = card.dataset.id
+
+        document.querySelector('#delete-confirm').show()
+    })
+
+    document.querySelector('#delete-cancel').addEventListener('click', () => {
+        document.querySelector('#delete-confirm').close()
+        taskToDelete = null
+    })
+
+    document.querySelector('#delete-confirm-btn').addEventListener('click', async () => {
+        if (!taskToDelete) return
+        document.querySelector('#delete-confirm').close()
+        
+        await fetch('/api/userdata/tasks/' + taskToDelete, {
+            method: 'DELETE'
+        })
+
+        taskToDelete = null
+        await renderTasks()
+    })
+})
+
+window.addEventListener('hashchange', showPage)
+
 function showPage() {
-    let hash = window.location.hash.replace('#', '')
+    let hash = window.location.hash.replace('#', '');
     if (hash === '') {
         hash = 'summary'
         window.location.hash = 'summary'
-    }
+    };
+    
+    let pages = document.querySelectorAll('.page');
 
-    const pages = document.querySelectorAll('.page')
-    for (let page of pages) page.classList.remove('active')
     for (let page of pages) {
-        if (page.id === hash) page.classList.add('active')
+        page.classList.remove('active')
     }
 
-    const pgNames = ['summary', 'tasks', 'guides']
+    for (let page of pages) {
+        if (page.id === hash) {
+            page.classList.add('active');
+        };
+    };
+
+    const pgNames = ["summary", "tasks", "guides"]
     tabs.activeTabIndex = pgNames.indexOf(hash)
 
     runPageScripts(hash)
@@ -136,181 +233,104 @@ async function runPageScripts(hash) {
         document.querySelector('[label="Clutter"]').selected = filters.clutter
 
         await renderTasks()
-    }
+    };
 }
 
-window.addEventListener('hashchange', showPage)
+async function getSettings() {
+    const response = await fetch('/api/userdata/settings')
+    const data = await response.json()
+    return data
+}
 
+let saveTimer
 
+document.querySelector('#taskList').addEventListener('focusout', (event) => {
+    if (!event.target.dataset.field) return
+    const card = event.target.closest('.card')
+    if (!card) return
+    const taskId = card.dataset.id
+    const field = event.target.dataset.field
+    const value = event.target.value
 
-// INIT
+    fetch('/api/userdata/tasks/' + taskId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value })
+    }).then(() => renderTasks())
+})
 
-let taskToDelete = null
+document.querySelector('#taskList').addEventListener('change', (event) => {
+    if (event.target.tagName !== 'MD-CHECKBOX') return
+    const card = event.target.closest('.card')
+    const taskId = card.dataset.id
 
-document.addEventListener('DOMContentLoaded', () => {
+fetch('/api/userdata/tasks/' + taskId, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ done: event.target.checked })
+}).then(() => setTimeout(() => renderTasks(), 500))
+})
 
-    // Account info
-    getSettings().then(settings => {
-        document.querySelector('#account-info div').innerHTML =
-            `${settings.nickname}<br><small>${settings.email}</small>`
+document.querySelector('.content-area').addEventListener('click', (event) => {
+    if (event.target.tagName !== 'MD-FILTER-CHIP') return
+    setTimeout(() => renderTasks(), 50)
+})
+
+document.querySelector('#settings-modal').addEventListener('focusout', (event) => {
+    if (event.target.tagName !== 'MD-OUTLINED-TEXT-FIELD' || event.target.id === 'settings-email') return
+
+    const field = event.target.dataset.field
+    const value = event.target.value
+
+    let body
+    if (field === 'canvas.apiKey') {
+        body = { canvas: { apiKey: value } }
+    } else {
+        body = { [field]: value }
+    }
+
+    fetch('/api/userdata/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
     })
 
-    // Account menu
-    document.querySelector('#account-btn').addEventListener('click', () => {
-        const menu = document.querySelector('#account-menu')
-        menu.open = !menu.open
+})
+
+document.querySelector('#settings-modal').addEventListener('change', (event) => {
+    if (event.target.tagName !== 'MD-SWITCH') return
+
+    const selected = event.target.selected
+
+    let body
+    if (event.target.selected === true) {
+        body = { theme: 'dark'}
+    } else body = { theme: 'light'}
+
+    fetch('/api/userdata/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
     })
 
-    // Sign out
-    document.querySelector('#signout-btn').addEventListener('click', () => {
-        window.location.href = '/oauth2/sign_out'
+})
+
+document.querySelector('#settings-modal').addEventListener('click', (event) => {
+    if (event.target.tagName !== 'MD-FILTER-CHIP') return
+
+    const selected = event.target.selected
+    const field = event.target.dataset.field
+    const value = event.target.selected
+
+    console.log(event.target.tagName, field, value)
+
+    let body = { defaultFilters: { [field]: value } }
+
+
+    fetch('/api/userdata/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
     })
 
-    // Tabs
-    tabs = document.querySelector('md-tabs')
-    tabs.addEventListener('change', () => {
-        const pgNames = ['summary', 'tasks', 'guides']
-        const name = pgNames[tabs.activeTabIndex]
-        if (window.location.hash !== `#${name}`) window.location.hash = name
-    })
-
-    // Settings modal — open
-    document.querySelector('#settings-btn').addEventListener('click', () => {
-        getSettings().then(settings => {
-            document.querySelector('#settings-nickname').value = settings.nickname
-            document.querySelector('#settings-email').value = settings.email
-            document.querySelector('#settings-theme').selected = settings.theme === 'dark'
-            document.querySelector('#pref-canvas-key').value = settings.canvas.apiKey
-
-            document.querySelector('#pref-undone').selected = settings.defaultFilters.undone === true
-            document.querySelector('#pref-done').selected = settings.defaultFilters.done === true
-            document.querySelector('#pref-canvas').selected = settings.defaultFilters.canvas === true
-            document.querySelector('#pref-clutter').selected = settings.defaultFilters.clutter === true
-
-            document.querySelector('#settings-modal').show()
-        })
-    })
-
-    // Settings modal — close
-    document.querySelector('#settings-close').addEventListener('click', () => {
-        document.querySelector('#settings-modal').close()
-    })
-
-    // Settings — canvas key visibility toggle
-    document.querySelector('#toggle-canvas-key').addEventListener('click', () => {
-        const key = document.querySelector('#pref-canvas-key')
-        key.type = key.type === 'password' ? 'text' : 'password'
-    })
-
-    // Settings — text field save on blur
-    document.querySelector('#settings-modal').addEventListener('focusout', (event) => {
-        if (event.target.tagName !== 'MD-OUTLINED-TEXT-FIELD' || event.target.id === 'settings-email') return
-
-        const field = event.target.dataset.field
-        const value = event.target.value
-
-        const body = field === 'canvas.apiKey'
-            ? { canvas: { apiKey: value } }
-            : { [field]: value }
-
-        fetch('/api/userdata/settings', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        })
-    })
-
-    // Settings — theme toggle save
-    document.querySelector('#settings-modal').addEventListener('change', (event) => {
-        if (event.target.tagName !== 'MD-SWITCH') return
-
-        fetch('/api/userdata/settings', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ theme: event.target.selected ? 'dark' : 'light' })
-        })
-    })
-
-    // Settings — filter chip save
-    document.querySelector('#settings-modal').addEventListener('click', (event) => {
-        if (event.target.tagName !== 'MD-FILTER-CHIP') return
-
-        const field = event.target.dataset.field
-        const value = event.target.selected
-
-        fetch('/api/userdata/settings', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ defaultFilters: { [field]: value } })
-        })
-    })
-
-    // Tasks — new task
-    document.querySelector('#new-task-btn').addEventListener('click', () => {
-        createNewTask()
-    })
-
-    // Tasks — filter chips
-    document.querySelector('.content-area').addEventListener('click', (event) => {
-        if (event.target.tagName !== 'MD-FILTER-CHIP') return
-        setTimeout(() => renderTasks(), 50)
-    })
-
-    // Tasks — edit field on blur
-    document.querySelector('#taskList').addEventListener('focusout', (event) => {
-        if (!event.target.dataset.field) return
-        const card = event.target.closest('.card')
-        if (!card) return
-
-        const taskId = card.dataset.id
-        const field = event.target.dataset.field
-        const value = event.target.value
-
-        fetch('/api/userdata/tasks/' + taskId, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ [field]: value })
-        }).then(() => renderTasks())
-    })
-
-    // Tasks — checkbox toggle
-    document.querySelector('#taskList').addEventListener('change', (event) => {
-        if (event.target.tagName !== 'MD-CHECKBOX') return
-        const card = event.target.closest('.card')
-        const taskId = card.dataset.id
-
-        fetch('/api/userdata/tasks/' + taskId, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ done: event.target.checked })
-        }).then(() => setTimeout(() => renderTasks(), 500))
-    })
-
-    // Tasks — delete button
-    document.querySelector('#taskList').addEventListener('click', (event) => {
-        const deleteBtn = event.target.closest('.delete-btn')
-        if (!deleteBtn) return
-
-        const card = deleteBtn.closest('.card')
-        taskToDelete = card.dataset.id
-        document.querySelector('#delete-confirm').show()
-    })
-
-    // Tasks — delete confirm/cancel
-    document.querySelector('#delete-cancel').addEventListener('click', () => {
-        document.querySelector('#delete-confirm').close()
-        taskToDelete = null
-    })
-
-    document.querySelector('#delete-confirm-btn').addEventListener('click', async () => {
-        if (!taskToDelete) return
-        document.querySelector('#delete-confirm').close()
-
-        await fetch('/api/userdata/tasks/' + taskToDelete, { method: 'DELETE' })
-
-        taskToDelete = null
-        await renderTasks()
-    })
-
-    showPage()
 })
