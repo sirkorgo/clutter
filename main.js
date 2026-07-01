@@ -74,6 +74,19 @@ async function initUser(userEmail) {
     await fs.writeFile(path.join(userFolder, 'guides.json'), JSON.stringify([], null, 2), 'utf8');
     await fs.writeFile(path.join(userFolder, 'settings.json'), JSON.stringify({}, null, 2), 'utf8');
 
+    await fs.writeFile(path.join(userFolder, 'settings.json'), JSON.stringify({
+        email: userEmail,
+        nickname: '',
+        theme: 'light',
+        defaultFilters: {
+            incomplete: true,
+            completed: false,
+            canvas: true,
+            clutter: true
+        },
+        canvasApiKey: ''
+    }, null, 2), 'utf8');
+
     return userId;
 }
 
@@ -82,6 +95,17 @@ app.post('/api/userdata/getUserId', async (req, res) => {
   const userEmail = req.userEmail;
   const userId = await getUser(userEmail);
   res.json({ userId });
+});
+
+app.get('/api/userdata/settings', async (req, res) => {
+    const userEmail = req.userEmail;
+    const userId = await getUser(userEmail);
+
+    const settingsPath = path.join(__dirname, 'userdata', userId, 'settings.json');
+    const data = await fs.readFile(settingsPath, 'utf8');
+    const prefs = JSON.parse(data);
+
+    res.json(prefs);
 });
 
 // Tasks API

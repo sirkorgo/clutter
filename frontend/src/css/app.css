@@ -7,6 +7,17 @@ header {
     background-color: var(--md-sys-color-surface);
 }
 
+#account-menu {
+    min-width: 200px;
+}
+
+.settings-section {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: var(--md-sys-color-primary);
+    font-weight: 600;
+}
+
 .header-top {
     display: flex;
     justify-content: space-between;

@@ -31,9 +31,21 @@
                 <md-icon-button id="settings-btn">
                     <md-icon>settings</md-icon>
                 </md-icon-button>
-                <md-icon-button>
-                    <md-icon>account_circle</md-icon>
-                </md-icon-button>
+                <div style="position: relative;">
+                    <md-icon-button id="account-btn">
+                        <md-icon>account_circle</md-icon>
+                    </md-icon-button>
+                    <md-menu id="account-menu" anchor="account-btn">
+                        <md-menu-item id="account-info" noninteractive>
+                            <div slot="headline">Logged in as Jake</div>
+                        </md-menu-item>
+                        <md-divider></md-divider>
+                        <md-menu-item id="signout-btn">
+                            <md-icon slot="start">logout</md-icon>
+                            <div slot="headline">Sign out</div>
+                        </md-menu-item>
+                    </md-menu>
+                </div>
             </div>
         </div>
     </header>
@@ -71,11 +83,50 @@
 
         <!-- Settings modal -->
         <md-dialog id="settings-modal">
-            <div slot="headline">Settings</div>
-            <form slot="content">
-                <!-- Settings form here -->
-            </form>
-        </md-dialog>
+    <div slot="headline">
+        Settings
+        <md-icon-button id="settings-close" style="position: absolute; right: 16px; top: 16px;">
+            <md-icon>close</md-icon>
+        </md-icon-button>
+    </div>
+    <div slot="content" style="min-width: 400px;">
+        
+        <!-- Profile -->
+        <h3 class="settings-section">Profile</h3>
+        <md-outlined-text-field id="settings-nickname" label="Nickname" style="width: 100%;"></md-outlined-text-field>
+        <md-outlined-text-field id="settings-email" label="Email" readonly style="width: 100%;"></md-outlined-text-field>
+
+        <md-divider style="margin: 16px 0;"></md-divider>
+
+        <!-- Customization -->
+        <h3 class="settings-section">Customization</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Dark Mode</span>
+            <md-switch id="settings-theme"></md-switch>
+        </div>
+        <div style="margin-top: 16px;">
+            <span>Default Task Filters</span>
+            <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                <md-filter-chip id="pref-undone" label="Incomplete"></md-filter-chip>
+                <md-filter-chip id="pref-done" label="Completed"></md-filter-chip>
+                <md-filter-chip id="pref-canvas" label="Canvas"></md-filter-chip>
+                <md-filter-chip id="pref-clutter" label="Clutter"></md-filter-chip>
+            </div>
+        </div>
+
+        <md-divider style="margin: 16px 0;"></md-divider>
+
+        <!-- Integrations -->
+        <h3 class="settings-section">Integrations</h3>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <md-outlined-text-field id="pref-canvas-key" label="Canvas API Key" type="password" style="flex: 1;"></md-outlined-text-field>
+            <md-icon-button id="toggle-canvas-key">
+                <md-icon>visibility</md-icon>
+            </md-icon-button>
+        </div>
+
+    </div>
+</md-dialog>
     </main>
     <md-dialog id="delete-confirm">
         <div slot="headline">Delete Task?</div>
