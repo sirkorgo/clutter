@@ -54,7 +54,7 @@
         <!-- Content areas -->
         <div class="content-area">
             <div id="summary" class="page">
-                <p>The summary page</p>
+                <h1 style="margin-top: 0;">Summary</h1>
             </div>
             <div id="tasks" class="page">
                 <h1 style="margin-top: 0;">Tasks</h1>
@@ -77,20 +77,20 @@
                 </section>
             </div>
             <div id="guides" class="page">
-                guides page
+                <h1 style="margin-top: 0;">Guides</h1>
             </div>
         </div>
 
         <!-- Settings modal -->
         <md-dialog id="settings-modal">
     <div slot="headline">
-        Settings
+        Preferences
         <md-icon-button id="settings-close" style="position: absolute; right: 16px; top: 16px;">
             <md-icon>close</md-icon>
         </md-icon-button>
     </div>
     <div slot="content" style="min-width: 400px;">
-        
+        <p style="margin-top: 0;">Some changes won't save until you reload the page.</p>
         <!-- Profile -->
         <h3 class="settings-section">Profile</h3>
         <md-outlined-text-field  data-field="nickname" id="settings-nickname" label="Nickname" style="width: 100%;"></md-outlined-text-field>
@@ -107,10 +107,10 @@
         <div style="margin-top: 16px;">
             <span>Default Task Filters</span>
             <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-                <md-filter-chip id="pref-undone" label="Incomplete"></md-filter-chip>
-                <md-filter-chip id="pref-done" label="Completed"></md-filter-chip>
-                <md-filter-chip id="pref-canvas" label="Canvas"></md-filter-chip>
-                <md-filter-chip id="pref-clutter" label="Clutter"></md-filter-chip>
+                <md-filter-chip id="pref-undone" data-field="undone" label="Incomplete"></md-filter-chip>
+                <md-filter-chip id="pref-done" data-field="done" label="Completed"></md-filter-chip>
+                <md-filter-chip id="pref-canvas" data-field="canvas" label="Canvas"></md-filter-chip>
+                <md-filter-chip id="pref-clutter" data-field="clutter" label="Clutter"></md-filter-chip>
             </div>
         </div>
 
@@ -121,6 +121,7 @@
         <div style="display: flex; gap: 8px; align-items: center;">
             <md-outlined-text-field data-field="canvas.apiKey" id="pref-canvas-key" label="Canvas API Key" type="password" style="flex: 1;"></md-outlined-text-field>
         </div>
+        <p style="margin: 0;"><small>Your API keys are encrypted using AES-256-CBC, and are never shared.</small></p>
 
     </div>
 </md-dialog>
