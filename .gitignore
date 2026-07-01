@@ -1,5 +1,6 @@
 userdata/*
 !userdata/.gitkeep
+oauth2/authenticated-emails.txt
 
 # Logs
 logs
