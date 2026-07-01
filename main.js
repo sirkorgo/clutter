@@ -4,7 +4,12 @@ const app = express();
 app.use(express.json());
 app.use('/node_modules', express.static('node_modules'));
 app.use(express.static('frontend'));
+const crypto = require('crypto')
 // require('dotenv').config();
+
+function genId() {
+    return crypto.randomBytes(4).toString('hex')
+}
 
 // userdata management
 const fs = require('fs').promises;
@@ -13,7 +18,6 @@ const { v4: uuidv4 } = require('uuid');
 const { encrypt } = require('./utils/crypto');
 
 function requireAuth(req, res, next) {
-    console.log('Headers received:', req.headers);
     const userEmail = req.headers['x-forwarded-email'];
     
     if (!userEmail) {
@@ -103,18 +107,57 @@ app.post('/api/userdata/tasks', async (req, res) => {
     const tasks = JSON.parse(data);
 
     const newTask = {
-        id: uuidv4(),
-        title: req.body.title,
-        done: req.body.done,
-        due: req.body.due,
-        note: req.body.note
+        id: genId(),
+        title: req.body.title || '',
+        done: req.body.done || false,
+        due: req.body.due || null,
     };
     
     tasks.push(newTask)
     await fs.writeFile(tasksPath, JSON.stringify(tasks, null, 2), 'utf8');
 
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', id: newTask.id })
 });
+
+app.patch('/api/userdata/tasks/:id', async (req, res) => {
+        const userEmail = req.userEmail;
+        const userId = await getUser(userEmail);
+        const tasksPath = path.join(__dirname, 'userdata', userId, 'tasks.json');
+
+        const data = await fs.readFile(tasksPath, 'utf8');
+        const tasks = JSON.parse(data);
+
+        const taskId = req.params.id
+        const taskIndex = tasks.findIndex(t => t.id === taskId)
+
+        if (taskIndex === -1) {
+            return res.status(404).json({ error: 'Task not found' })
+        };
+        
+        tasks[taskIndex] = { ...tasks[taskIndex], ...req.body };
+        await fs.writeFile(tasksPath, JSON.stringify(tasks, null, 2), 'utf8')
+        return res.json({status:'ok'})
+})
+
+app.delete('/api/userdata/tasks/:id', async (req, res)=> {
+    const userEmail = req.userEmail;
+    const userId = await getUser(userEmail);
+    const tasksPath = path.join(__dirname, 'userdata', userId, 'tasks.json');
+
+    const data = await fs.readFile(tasksPath, 'utf8');
+    const tasks = JSON.parse(data);
+
+    const taskId = req.params.id
+    const taskIndex = tasks.findIndex(t => t.id === taskId)
+
+    if (taskIndex === -1) {
+        return res.status(404).json({ error: 'Task not found' })
+    };
+        
+    const updatedTasks = tasks.filter(t => t.id !== taskId)
+    await fs.writeFile(tasksPath, JSON.stringify(updatedTasks, null, 2), 'utf8')
+    return res.json({status:'ok'})
+})
 
 // Guides API
 app.get('/api/userdata/guides', async (req, res) => {

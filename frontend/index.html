@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html class="light">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
@@ -35,20 +36,6 @@
                 </md-icon-button>
             </div>
         </div>
-        <md-tabs>
-            <md-primary-tab id="tab-summary">
-                <md-icon slot="icon">dashboard</md-icon>
-                Summary
-            </md-primary-tab>
-            <md-primary-tab id="tab-tasks">
-                <md-icon slot="icon">pending_actions</md-icon>
-                Tasks
-            </md-primary-tab>
-            <md-primary-tab id="tab-guides">
-                <md-icon slot="icon">developer_guide</md-icon>
-                Guides
-            </md-primary-tab>
-        </md-tabs>
     </header>
     <main>
 
@@ -58,7 +45,24 @@
                 <p>The summary page</p>
             </div>
             <div id="tasks" class="page">
-                <p>The tasks page</p>
+                <h1 style="margin-top: 0;">Tasks</h1>
+                <span class="task-toolbar">
+                <md-fab id="new-task-btn" label="New Task">
+                <md-icon slot="icon">add</md-icon>
+                </md-fab>
+                <span class="filter-selector">
+                <md-chip-set id="task-filters">
+                    <md-filter-chip label="Incomplete"></md-filter-chip>
+                    <md-filter-chip label="Completed"></md-filter-chip>
+                </md-chip-set>
+                <md-chip-set id="task-type">
+                    <md-filter-chip label="Canvas"></md-filter-chip>
+                    <md-filter-chip label="Clutter"></md-filter-chip>
+                </md-chip-set>
+                </span>
+                </span>
+                <section id="taskList">
+                </section>
             </div>
             <div id="guides" class="page">
                 guides page
@@ -73,7 +77,28 @@
             </form>
         </md-dialog>
     </main>
-
+    <md-dialog id="delete-confirm">
+        <div slot="headline">Delete Task?</div>
+        <div slot="content">This can't be undone.</div>
+        <div slot="actions">
+            <md-text-button id="delete-cancel">Cancel</md-text-button>
+            <md-filled-button id="delete-confirm-btn">Delete</md-filled-button>
+        </div>
+    </md-dialog>
     <script src="app.js"></script>
 </body>
+<md-tabs>
+            <md-primary-tab id="tab-summary">
+                <md-icon slot="icon">dashboard</md-icon>
+                Summary
+            </md-primary-tab>
+            <md-primary-tab id="tab-tasks">
+                <md-icon slot="icon">pending_actions</md-icon>
+                Tasks
+            </md-primary-tab>
+            <md-primary-tab id="tab-guides">
+                <md-icon slot="icon">developer_guide</md-icon>
+                Guides
+            </md-primary-tab>
+        </md-tabs>
 </html>

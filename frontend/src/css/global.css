@@ -5,11 +5,12 @@ html.light {
 
 :root {
   --md-sys-color-primary: #2d65ff;
-  --md-sys-color-secondary: #f3f3f3;
+  --md-sys-color-secondary: rgb(203, 223, 255);
   --md-ref-typeface-brand: 'Open Sans';
   --md-ref-typeface-plain: system-ui;
   font-family: "Google Sans";
   --md-text-button-label-text-color: var(--secondary-font-color);
+  --md-dialog-headline-font: "Google Sans";
 }
 
 @import "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=settings";
@@ -20,6 +21,15 @@ html.light {
 
 body {
     margin: 0px;
+}
+
+.code-block {
+    background-color: var(--md-sys-color-surface-container-high);
+    font-family: monospace;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    color: var(--secondary-font-color);
 }
 
 main {

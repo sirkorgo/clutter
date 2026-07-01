@@ -1,11 +1,43 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* Prevents any accidental page-level scrolling */
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 15px; 
+  box-sizing: border-box; 
+  gap: 15px; 
+  overflow: hidden; /* Keeps everything locked inside the viewport */
+}
+
+.nav {
+  display: flex;
+  min-height: 50px; 
+  width: 100%;
+  align-items: center;
+  padding: 0; 
+}
+
+/* Fixes the layout calculation error by removing the default browser <p> margins */
+.nav p {
+  margin: 0;
+  font-family: "Google Sans";
+  font-weight: 500;
+  font-size: 1.2rem;
+  /* Left-aligned by default now since text-align: center was removed from HTML */
+}
+
 .splash-container {
   position: relative;
   width: 100%;
-  height: 50%;
-  max-height: 1080px;
+  flex: 1; 
   overflow: hidden;
-  border-radius: 15px;
-
+  border-radius: 15px; 
 }
 
 .splash-art {
@@ -14,6 +46,7 @@
   object-fit: cover;
 }
 
+/* Anchors seamlessly to the bottom-left of the bounding image container */
 .artist-badge {
   position: absolute;
   bottom: 20px;
@@ -25,7 +58,9 @@
   color: #ffffff;
   font-family: "Google Sans";
   pointer-events: none;
-    text-shadow: 6px 6px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 6px 6px 4px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.3); 
+  backdrop-filter: blur(4px);
 }
 
 .artist-badge .title {
@@ -37,13 +72,4 @@
 .artist-badge .artist {
   font-size: 0.8rem;
   opacity: 0.9;
-}
-
-.nav {
-    display: flex;
-    min-height: 50px; 
-    width: 100%;
-    align-items: center;
-    padding: 0 15px;
-
 }
