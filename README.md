@@ -12,6 +12,10 @@ I designed it around what I personally need in my school-life, and these are the
 
 Currently, the project is in a very early development stage, and most features I have planned HAVEN'T been integrated yet. I may add more features depending on whether these features become too primitive for me.
 
+## Live Demo
+My instance of Clutter is up at [clutter.sirkorgo.com](https://clutter.sirkorgo.com) if you would like to try out Clutter.
+Just sign in using your Google Account and that's it!
+
 ## Installation
 ### Dependencies
   - Docker (with Docker Compose)
