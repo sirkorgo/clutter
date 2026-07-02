@@ -203,6 +203,17 @@ app.delete("/api/userdata/tasks/:id", async (req, res) => {
 });
 
 // GUIDES API
+app.patch("/api/userdata/guides/reorder", async (req, res) => {
+  const userId = await getUser(req.userEmail);
+  const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");
+  const guides = JSON.parse(await fs.readFile(guidesPath, "utf8"));
+
+  const reordered = req.body.map((id) => guides.find((g) => g.id === id));
+
+  await fs.writeFile(guidesPath, JSON.stringify(reordered, null, 2), "utf8");
+  res.json({ status: "ok" });
+});
+
 app.get("/api/userdata/guides", async (req, res) => {
   const userId = await getUser(req.userEmail);
   const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");

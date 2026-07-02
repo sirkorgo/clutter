@@ -1,13 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html class="light">
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
-    <link href="/src/css/global.css" rel="stylesheet">
-    <link href="/src/css/app.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <link href="/src/css/global.css" rel="stylesheet" />
+    <link href="/src/css/app.css" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    />
 
     <script type="importmap">
       {
@@ -17,137 +24,162 @@
       }
     </script>
     <script type="module">
-      import '@material/web/all.js';
-      import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
+      import "@material/web/all.js";
+      import { styles as typescaleStyles } from "@material/web/typography/md-typescale-styles.js";
 
       document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
     </script>
-</head>
-<body>
-        <header>
-        <div class="header-top">
-            <h1 class="logo">Clutter</h1>
-            <div class="header-actions">
-                <md-icon-button id="settings-btn">
-                    <md-icon>settings</md-icon>
-                </md-icon-button>
-                <div style="position: relative;">
-                    <md-icon-button id="account-btn">
-                        <md-icon>account_circle</md-icon>
-                    </md-icon-button>
-                    <md-menu id="account-menu" anchor="account-btn">
-                        <md-menu-item id="account-info" noninteractive>
-                            <div slot="headline">Logged in as Jake</div>
-                        </md-menu-item>
-                        <md-divider></md-divider>
-                        <md-menu-item id="signout-btn">
-                            <md-icon slot="start">logout</md-icon>
-                            <div slot="headline">Sign out</div>
-                        </md-menu-item>
-                    </md-menu>
-                </div>
-            </div>
+  </head>
+  <body>
+    <header>
+      <div class="header-top">
+        <h1 class="logo">Clutter</h1>
+        <div class="header-actions">
+          <md-icon-button id="settings-btn">
+            <md-icon>settings</md-icon>
+          </md-icon-button>
+          <div style="position: relative">
+            <md-icon-button id="account-btn">
+              <md-icon>account_circle</md-icon>
+            </md-icon-button>
+            <md-menu id="account-menu" anchor="account-btn">
+              <md-menu-item id="account-info" noninteractive>
+                <div slot="headline">Logged in as Jake</div>
+              </md-menu-item>
+              <md-divider></md-divider>
+              <md-menu-item id="signout-btn">
+                <md-icon slot="start">logout</md-icon>
+                <div slot="headline">Sign out</div>
+              </md-menu-item>
+            </md-menu>
+          </div>
         </div>
+      </div>
     </header>
     <main>
-
-        <!-- Content areas -->
-        <div class="content-area">
-            <div id="summary" class="page">
-                <h1 style="margin-top: 0;">Summary</h1>
-            </div>
-            <div id="tasks" class="page">
-                <h1 style="margin-top: 0;">Tasks</h1>
-                <span class="task-toolbar">
-                <md-fab id="new-task-btn" label="New Task">
-                <md-icon slot="icon">add</md-icon>
-                </md-fab>
-                <span class="filter-selector">
-                <md-chip-set id="task-filters">
-                    <md-filter-chip label="Incomplete"></md-filter-chip>
-                    <md-filter-chip label="Completed"></md-filter-chip>
-                </md-chip-set>
-                <md-chip-set id="task-type">
-                    <md-filter-chip label="Canvas"></md-filter-chip>
-                    <md-filter-chip label="Clutter"></md-filter-chip>
-                </md-chip-set>
-                </span>
-                </span>
-                <section id="taskList">
-                </section>
-            </div>
-            <div id="guides" class="page">
-                <h1 style="margin-top: 0;">Guides</h1>
-            </div>
+      <!-- Content areas -->
+      <div class="content-area">
+        <div id="summary" class="page">
+          <h1 style="margin-top: 0">Summary</h1>
         </div>
+        <div id="tasks" class="page">
+          <h1 style="margin-top: 0">Tasks</h1>
+          <span class="task-toolbar">
+            <md-fab id="new-task-btn" label="New Task">
+              <md-icon slot="icon">add</md-icon>
+            </md-fab>
+            <span class="filter-selector">
+              <md-chip-set id="task-filters">
+                <md-filter-chip label="Incomplete"></md-filter-chip>
+                <md-filter-chip label="Completed"></md-filter-chip>
+              </md-chip-set>
+              <md-chip-set id="task-type">
+                <md-filter-chip label="Canvas"></md-filter-chip>
+                <md-filter-chip label="Clutter"></md-filter-chip>
+              </md-chip-set>
+            </span>
+          </span>
+          <section id="taskList"></section>
+        </div>
+        <div id="guides" class="page">
+          <h1 style="margin-top: 0">Guides</h1>
+          <span class="guides-toolbar">
+            <md-fab id="new-guide-btn" label="New Guide">
+              <md-icon slot="icon">add</md-icon>
+            </md-fab>
+          </span>
+          <span class="filter-selector">
+            <md-chip-set id="guide-tab-switcher">
+              <md-filter-chip label="Active"></md-filter-chip>
+              <md-filter-chip label="Archived"></md-filter-chip>
+            </md-chip-set>
+          </span>
+          <section id="guideList"></section>
+        </div>
+      </div>
 
-        <!-- Settings modal -->
-        <md-dialog id="settings-modal">
-    <div slot="headline">
-        Preferences
-        <md-icon-button id="settings-close" style="position: absolute; right: 16px; top: 16px;">
+      <!-- Settings modal -->
+      <md-dialog id="settings-modal">
+        <div slot="headline">
+          Preferences
+          <md-icon-button id="settings-close" style="position: absolute; right: 16px; top: 16px">
             <md-icon>close</md-icon>
-        </md-icon-button>
-    </div>
-    <div slot="content" style="min-width: 400px;">
-        <p style="margin-top: 0;">Some changes won't save until you reload the page.</p>
-        <!-- Profile -->
-        <h3 class="settings-section">Profile</h3>
-        <md-outlined-text-field  data-field="nickname" id="settings-nickname" label="Nickname" style="width: 100%;"></md-outlined-text-field>
-        <md-outlined-text-field  id="settings-email" label="Email" readonly style="width: 100%;"></md-outlined-text-field>
+          </md-icon-button>
+        </div>
+        <div slot="content" style="min-width: 400px">
+          <p style="margin-top: 0">Some changes won't save until you reload the page.</p>
+          <!-- Profile -->
+          <h3 class="settings-section">Profile</h3>
+          <md-outlined-text-field
+            data-field="nickname"
+            id="settings-nickname"
+            label="Nickname"
+            style="width: 100%"
+          ></md-outlined-text-field>
+          <md-outlined-text-field
+            id="settings-email"
+            label="Email"
+            readonly
+            style="width: 100%"
+          ></md-outlined-text-field>
 
-        <md-divider style="margin: 16px 0;"></md-divider>
+          <md-divider style="margin: 16px 0"></md-divider>
 
-        <!-- Customization -->
-        <h3 class="settings-section">Customization</h3>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <!-- Customization -->
+          <h3 class="settings-section">Customization</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center">
             <span>Dark Mode</span>
             <md-switch id="settings-theme"></md-switch>
-        </div>
-        <div style="margin-top: 16px;">
+          </div>
+          <div style="margin-top: 16px">
             <span>Default Task Filters</span>
-            <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
-                <md-filter-chip id="pref-undone" data-field="undone" label="Incomplete"></md-filter-chip>
-                <md-filter-chip id="pref-done" data-field="done" label="Completed"></md-filter-chip>
-                <md-filter-chip id="pref-canvas" data-field="canvas" label="Canvas"></md-filter-chip>
-                <md-filter-chip id="pref-clutter" data-field="clutter" label="Clutter"></md-filter-chip>
+            <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap">
+              <md-filter-chip id="pref-undone" data-field="undone" label="Incomplete"></md-filter-chip>
+              <md-filter-chip id="pref-done" data-field="done" label="Completed"></md-filter-chip>
+              <md-filter-chip id="pref-canvas" data-field="canvas" label="Canvas"></md-filter-chip>
+              <md-filter-chip id="pref-clutter" data-field="clutter" label="Clutter"></md-filter-chip>
             </div>
+          </div>
+
+          <md-divider style="margin: 16px 0"></md-divider>
+
+          <!-- Integrations -->
+          <h3 class="settings-section">Integrations</h3>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <md-outlined-text-field
+              data-field="canvas.apiKey"
+              id="pref-canvas-key"
+              label="Canvas API Key"
+              type="password"
+              style="flex: 1"
+            ></md-outlined-text-field>
+          </div>
+          <p style="margin: 0"><small>Your API keys are encrypted using AES-256-CBC, and are never shared.</small></p>
         </div>
-
-        <md-divider style="margin: 16px 0;"></md-divider>
-
-        <!-- Integrations -->
-        <h3 class="settings-section">Integrations</h3>
-        <div style="display: flex; gap: 8px; align-items: center;">
-            <md-outlined-text-field data-field="canvas.apiKey" id="pref-canvas-key" label="Canvas API Key" type="password" style="flex: 1;"></md-outlined-text-field>
-        </div>
-        <p style="margin: 0;"><small>Your API keys are encrypted using AES-256-CBC, and are never shared.</small></p>
-
-    </div>
-</md-dialog>
+      </md-dialog>
     </main>
     <md-dialog id="delete-confirm">
-        <div slot="headline">Delete Task?</div>
-        <div slot="content">This can't be undone.</div>
-        <div slot="actions">
-            <md-text-button id="delete-cancel">Cancel</md-text-button>
-            <md-filled-button id="delete-confirm-btn">Delete</md-filled-button>
-        </div>
+      <div slot="headline">Delete Task?</div>
+      <div slot="content">This can't be undone.</div>
+      <div slot="actions">
+        <md-text-button id="delete-cancel">Cancel</md-text-button>
+        <md-filled-button id="delete-confirm-btn">Delete</md-filled-button>
+      </div>
     </md-dialog>
     <script src="app.js"></script>
-</body>
-<md-tabs>
-            <md-primary-tab id="tab-summary">
-                <md-icon slot="icon">dashboard</md-icon>
-                Summary
-            </md-primary-tab>
-            <md-primary-tab id="tab-tasks">
-                <md-icon slot="icon">pending_actions</md-icon>
-                Tasks
-            </md-primary-tab>
-            <md-primary-tab id="tab-guides">
-                <md-icon slot="icon">developer_guide</md-icon>
-                Guides
-            </md-primary-tab>
-        </md-tabs>
+  </body>
+  <md-tabs>
+    <md-primary-tab id="tab-summary">
+      <md-icon slot="icon">dashboard</md-icon>
+      Summary
+    </md-primary-tab>
+    <md-primary-tab id="tab-tasks">
+      <md-icon slot="icon">pending_actions</md-icon>
+      Tasks
+    </md-primary-tab>
+    <md-primary-tab id="tab-guides">
+      <md-icon slot="icon">developer_guide</md-icon>
+      Guides
+    </md-primary-tab>
+  </md-tabs>
 </html>

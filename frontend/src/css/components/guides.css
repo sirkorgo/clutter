@@ -1,0 +1,255 @@
+/* ================================
+   GUIDE CARDS
+   ================================ */
+.guide-card {
+  background-color: var(--md-sys-color-surface-container);
+  border-radius: 15px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    0 1px 3px 1px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.guide-card:hover {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.18),
+    0 4px 8px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* ================================
+   GUIDE HEADER ROW
+   ================================ */
+.guide-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-drag-handle {
+  cursor: grab;
+  color: var(--md-sys-color-outline);
+  flex-shrink: 0;
+}
+
+.guide-drag-handle:active {
+  cursor: grabbing;
+}
+
+.guide-title {
+  flex: 1;
+  font-weight: 500;
+  font-size: 1rem;
+  background: none;
+  border: none;
+  font-family: "Google Sans";
+  color: var(--md-sys-color-on-surface);
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.guide-title:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.guide-title:focus {
+  outline: none;
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.guide-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.guide-expand-btn {
+  transition: transform 0.2s ease;
+}
+
+.guide-expand-btn.expanded {
+  transform: rotate(180deg);
+}
+
+/* ================================
+   PROGRESS BAR
+   ================================ */
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-bar {
+  width: 80px;
+  height: 6px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 0.5px solid rgb(222, 222, 222);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--md-sys-color-primary);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.progress-pct {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-outline);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ================================
+   MILESTONES
+   ================================ */
+.milestone-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 24px;
+}
+
+.milestone {
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.milestone-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.milestone-title {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: none;
+  border: none;
+  font-family: "Google Sans";
+  color: var(--md-sys-color-on-surface);
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.milestone-title:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.milestone-title:focus {
+  outline: none;
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.milestone-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.milestone-expand-btn {
+  transition: transform 0.2s ease;
+}
+
+.milestone-expand-btn.expanded {
+  transform: rotate(180deg);
+}
+
+/* ================================
+   TASKS (INSIDE MILESTONES)
+   ================================ */
+.guide-task-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 16px;
+}
+
+.guide-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.guide-task-title {
+  flex: 1;
+  font-size: 0.875rem;
+  background: none;
+  border: none;
+  font-family: "Google Sans";
+  color: var(--md-sys-color-on-surface);
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.guide-task-title:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.guide-task-title:focus {
+  outline: none;
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+.guide-task-title.done {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.guide-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.add-milestone-btn,
+.add-task-btn {
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* ================================
+   ARCHIVED STATE
+   ================================ */
+.guide-card.archived .guide-drag-handle {
+  display: none;
+}
+
+.guide-card.archived .guide-title {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.guide-card.archived .milestone-title {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* ================================
+   RESPONSIVE
+   ================================ */
+@media (max-width: 670px) {
+  .progress-bar {
+    width: 50px;
+  }
+
+  .milestone-list {
+    padding-left: 8px;
+  }
+
+  .guide-task-list {
+    padding-left: 8px;
+  }
+}
