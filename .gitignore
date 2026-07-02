@@ -1,5 +1,6 @@
 userdata/*
 !userdata/.gitkeep
+.prettierrc
 
 # Logs
 logs
