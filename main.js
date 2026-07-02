@@ -109,7 +109,11 @@ app.get("/api/userdata/settings", async (req, res) => {
     const prefs = JSON.parse(await fs.readFile(settingsPath, "utf8"));
 
     const key = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
-    const canvasAPIKey = decrypt(prefs.canvas.apiKey, prefs.canvas.iv, key);
+
+    let canvasAPIKey = "";
+    if (prefs.canvas.apiKey) {
+      canvasAPIKey = decrypt(prefs.canvas.apiKey, prefs.canvas.iv, key);
+    }
 
     res.json({ ...prefs, canvas: { apiKey: canvasAPIKey } });
   } catch (err) {
@@ -311,7 +315,7 @@ app.delete("/api/userdata/guides/:gid/milestones/:msid", async (req, res) => {
 });
 
 // guide task apis
-app.post("/api/userdata/guides/:gid/milestones/:msid", async (req, res) => {
+app.post("/api/userdata/guides/:gid/milestones/:msid/tasks", async (req, res) => {
   const userId = await getUser(req.userEmail);
   const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");
   const guides = JSON.parse(await fs.readFile(guidesPath, "utf8"));
@@ -324,8 +328,60 @@ app.post("/api/userdata/guides/:gid/milestones/:msid", async (req, res) => {
   if (msIndex === -1) return res.status(404).json({ error: "Milestone not found" });
   const ms = guide.milestones[msIndex];
 
-  // for the other routes const task = ms.tasks.findIndex((s) => s.id === req.params.tid);
-  // TODO: Finish Guide Task APIs
+  const newTask = {
+    id: genId(),
+    title: "",
+    done: false,
+    link: "",
+  };
+
+  guides[guideIndex].milestones[msIndex].tasks.push(newTask);
+  await fs.writeFile(guidesPath, JSON.stringify(guides, null, 2), "utf8");
+  res.json({ status: "ok" });
+});
+
+app.patch("/api/userdata/guides/:gid/milestones/:msid/tasks/:tid", async (req, res) => {
+  const userId = await getUser(req.userEmail);
+  const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");
+  const guides = JSON.parse(await fs.readFile(guidesPath, "utf8"));
+
+  const guideIndex = guides.findIndex((g) => g.id === req.params.gid);
+  if (guideIndex === -1) return res.status(404).json({ error: "Guide not found" });
+  const guide = guides[guideIndex];
+
+  const msIndex = guide.milestones.findIndex((m) => m.id === req.params.msid);
+  if (msIndex === -1) return res.status(404).json({ error: "Milestone not found" });
+  const ms = guide.milestones[msIndex];
+
+  const taskIndex = ms.tasks.findIndex((s) => s.id === req.params.tid);
+  if (taskIndex === -1) return res.status(404).json({ error: "Task not found" });
+
+  const newTask = { ...guide.milestones[msIndex].tasks[taskIndex], ...req.body };
+
+  guides[guideIndex].milestones[msIndex].tasks[taskIndex] = newTask;
+  await fs.writeFile(guidesPath, JSON.stringify(guides, null, 2), "utf8");
+  res.json({ status: "ok" });
+});
+
+app.delete("/api/userdata/guides/:gid/milestones/:msid/tasks/:tid", async (req, res) => {
+  const userId = await getUser(req.userEmail);
+  const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");
+  const guides = JSON.parse(await fs.readFile(guidesPath, "utf8"));
+
+  const guideIndex = guides.findIndex((g) => g.id === req.params.gid);
+  if (guideIndex === -1) return res.status(404).json({ error: "Guide not found" });
+
+  const guide = guides[guideIndex];
+  const msIndex = guide.milestones.findIndex((m) => m.id === req.params.msid);
+  if (msIndex === -1) return res.status(404).json({ error: "Milestone not found" });
+  const ms = guide.milestones[msIndex];
+
+  const taskIndex = ms.tasks.findIndex((s) => s.id === req.params.tid);
+  if (taskIndex === -1) return res.status(404).json({ error: "Task not found" });
+
+  guide.milestones[msIndex].tasks = guide.milestones[msIndex].tasks.filter((t) => t.id !== req.params.tid);
+  await fs.writeFile(guidesPath, JSON.stringify(guides, null, 2), "utf8");
+  res.json({ status: "ok" });
 });
 
 // START
