@@ -193,9 +193,10 @@ async function renderMilestones(guideId) {
   const guideHTML = document.querySelector(`[data-id="${guideId}"]`);
   const msLs = guideHTML.querySelector(".milestone-list");
 
-  for (let ms of guide.milestones) {
-    const milestoneProgress = calcMilestoneProgress(ms);
-    const renderedMS = `
+  if (!guideHTML.querySelector(".milestone")) {
+    for (let ms of guide.milestones) {
+      const milestoneProgress = calcMilestoneProgress(ms);
+      const renderedMS = `
   <div class="milestone" data-id="${ms.id}">
     <div class="milestone-header">
         <input class="milestone-title" type="text" value="${ms.title}" placeholder="Milestone title">
@@ -222,16 +223,19 @@ async function renderMilestones(guideId) {
     </div>
 </div>`;
 
-    msLs.insertAdjacentHTML("beforeend", renderedMS);
-  }
-  msLs.insertAdjacentHTML(
-    "beforeend",
-    `
+      msLs.insertAdjacentHTML("beforeend", renderedMS);
+    }
+    msLs.insertAdjacentHTML(
+      "beforeend",
+      `
     <md-icon-button class="add-milestone-btn">
         <md-icon>add</md-icon>
     </md-icon-button>
 `,
-  );
+    );
+  } else {
+    return;
+  }
 }
 
 // Frontend

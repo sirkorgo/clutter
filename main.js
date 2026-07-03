@@ -270,6 +270,22 @@ app.delete("/api/userdata/guides/:id", async (req, res) => {
 });
 
 // guide milestone apis
+app.patch("/api/userdata/guides/:gid/milestones/reorder", async (req, res) => {
+  const userId = await getUser(req.userEmail);
+  const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");
+  const guides = JSON.parse(await fs.readFile(guidesPath, "utf8"));
+
+  const guideIndex = guides.findIndex((g) => g.id === req.params.gid);
+  if (guideIndex === -1) return res.status(404).json({ error: "Guide not found" });
+  const guide = guides[guideIndex];
+
+  const reordered = req.body.map((id) => guide.milestones.find((g) => g.id === id));
+
+  guide.milestones = reordered;
+  await fs.writeFile(guidesPath, JSON.stringify(guides, null, 2), "utf8");
+  res.json({ status: "ok" });
+});
+
 app.post("/api/userdata/guides/:id/milestones", async (req, res) => {
   const userId = await getUser(req.userEmail);
   const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");
@@ -326,6 +342,26 @@ app.delete("/api/userdata/guides/:gid/milestones/:msid", async (req, res) => {
 });
 
 // guide task apis
+app.patch("/api/userdata/guides/:gid/milestones/:msid/tasks/reorder", async (req, res) => {
+  const userId = await getUser(req.userEmail);
+  const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");
+  const guides = JSON.parse(await fs.readFile(guidesPath, "utf8"));
+
+  const guideIndex = guides.findIndex((g) => g.id === req.params.gid);
+  if (guideIndex === -1) return res.status(404).json({ error: "Guide not found" });
+  const guide = guides[guideIndex];
+
+  const msIndex = guide.milestones.findIndex((m) => m.id === req.params.msid);
+  if (msIndex === -1) return res.status(404).json({ error: "Milestone not found" });
+  const ms = guide.milestones[msIndex];
+
+  const reordered = req.body.map((id) => ms.tasks.find((g) => g.id === id));
+
+  guide.milestones[msIndex].tasks = reordered;
+  await fs.writeFile(guidesPath, JSON.stringify(guides, null, 2), "utf8");
+  res.json({ status: "ok" });
+});
+
 app.post("/api/userdata/guides/:gid/milestones/:msid/tasks", async (req, res) => {
   const userId = await getUser(req.userEmail);
   const guidesPath = path.join(__dirname, "userdata", userId, "guides.json");
