@@ -1,3 +1,6 @@
+let guides = [];
+let guidesLoaded = false;
+
 // API Endpoints
 async function getUserId() {
   const response = await fetch("/api/userdata/getUserId", {
@@ -101,23 +104,14 @@ async function sendNewTask() {
 }
 
 async function getGuides(type) {
-  const response = await fetch("/api/userdata/guides", {
-    method: "GET",
-  });
-
-  const data = await response.json();
-
-  if (type === "active") {
-    return data.filter((g) => {
-      return g.archived === false;
-    });
+  if (!guidesLoaded) {
+    const response = await fetch("/api/userdata/guides", { method: "GET" });
+    guidesLoaded = true;
+    guides = await response.json();
   }
 
-  if (type === "archived") {
-    return data.filter((g) => {
-      return g.archived === true;
-    });
-  }
+  if (type === "active") return guides.filter((g) => g.archived === false);
+  if (type === "archived") return guides.filter((g) => g.archived === true);
 }
 
 function calcGuideProgress(guide) {
@@ -164,9 +158,6 @@ async function renderActiveGuides() {
     </div>
 
     <div class="milestone-list" style="display: none;">
-        <md-icon-button class="add-milestone-btn">
-            <md-icon>add</md-icon>
-        </md-icon-button>
     </div>
 </div>`;
     guideList.insertAdjacentHTML("beforeend", renderedGuide);
@@ -185,6 +176,64 @@ async function renderActiveGuides() {
   });
 }
 
+function calcMilestoneProgress(ms) {
+  let total = 0;
+  let done = 0;
+  for (let task of ms.tasks) {
+    total = total + 1;
+    if (task.done === true) done = done + 1;
+  }
+  return total === 0 ? 0 : Math.round((done / total) * 100);
+}
+
+async function renderMilestones(guideId) {
+  const guides = await getGuides("active");
+  const guide = guides.find((g) => g.id === guideId);
+
+  const guideHTML = document.querySelector(`[data-id="${guideId}"]`);
+  const msLs = guideHTML.querySelector(".milestone-list");
+
+  for (let ms of guide.milestones) {
+    const milestoneProgress = calcMilestoneProgress(ms);
+    const renderedMS = `
+  <div class="milestone" data-id="${ms.id}">
+    <div class="milestone-header">
+        <input class="milestone-title" type="text" value="${ms.title}" placeholder="Milestone title">
+        <code class="code-block">${ms.id}</code>
+        <div class="milestone-actions">
+            <div class="progress-wrap">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${milestoneProgress}%"></div>
+                </div>
+                <span class="progress-pct">${milestoneProgress}%</span>
+            </div>
+            <md-icon-button class="milestone-expand-btn">
+                <md-icon>expand_more</md-icon>
+            </md-icon-button>
+            <md-icon-button class="delete-milestone-btn">
+                <md-icon>delete</md-icon>
+            </md-icon-button>
+        </div>
+    </div>
+    <div class="guide-task-list" style="display: none;">
+        <md-icon-button class="add-task-btn">
+            <md-icon>add</md-icon>
+        </md-icon-button>
+    </div>
+</div>`;
+
+    msLs.insertAdjacentHTML("beforeend", renderedMS);
+  }
+  msLs.insertAdjacentHTML(
+    "beforeend",
+    `
+    <md-icon-button class="add-milestone-btn">
+        <md-icon>add</md-icon>
+    </md-icon-button>
+`,
+  );
+}
+
 // Frontend
 let tabs;
 let isCreatingTask = false;
@@ -199,6 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     guideExpandBtn.classList.toggle("expanded");
     milestoneList.style.display = milestoneList.style.display === "none" ? "block" : "none";
+    renderMilestones(card.dataset.id);
   });
 
   getSettings().then((settings) => {
