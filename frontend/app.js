@@ -298,11 +298,21 @@ async function renderGuideTasks(guideId, milestoneId) {
   );
 }
 
+async function createNewGuide() {
+  const newGuide = await fetch("/api/userdata/guides", { method: "POST" });
+  guidesLoaded = false;
+  await renderActiveGuides();
+}
+
 // Frontend
 let tabs;
 let isCreatingTask = false;
 
 document.addEventListener("DOMContentLoaded", () => {
+  document.querySelector("#new-guide-btn").addEventListener("click", (event) => {
+    createNewGuide();
+  });
+
   document.querySelector("#guideList").addEventListener("click", (event) => {
     const msExpandBtn = event.target.closest(".milestone-expand-btn");
     if (!msExpandBtn) return;
