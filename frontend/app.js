@@ -193,12 +193,13 @@ async function renderMilestones(guideId) {
   const guideHTML = document.querySelector(`[data-id="${guideId}"]`);
   const msLs = guideHTML.querySelector(".milestone-list");
 
-  if (!guideHTML.querySelector(".milestone")) {
-    for (let ms of guide.milestones) {
-      const milestoneProgress = calcMilestoneProgress(ms);
-      const renderedMS = `
+  msLs.innerHTML = "";
+  for (let ms of guide.milestones) {
+    const milestoneProgress = calcMilestoneProgress(ms);
+    const renderedMS = `
   <div class="milestone" data-id="${ms.id}">
     <div class="milestone-header">
+        <md-icon class="ms-drag-handle">drag_indicator</md-icon>
         <input class="milestone-title" type="text" value="${ms.title}" placeholder="Milestone title">
         <code class="code-block">${ms.id}</code>
         <div class="milestone-actions">
@@ -217,25 +218,84 @@ async function renderMilestones(guideId) {
         </div>
     </div>
     <div class="guide-task-list" style="display: none;">
-        <md-icon-button class="add-task-btn">
-            <md-icon>add</md-icon>
+    </div>
+</div>`;
+
+    msLs.insertAdjacentHTML("beforeend", renderedMS);
+  }
+  Sortable.create(msLs, {
+    handle: ".ms-drag-handle",
+    animation: 150,
+    onEnd: (event) => {
+      const msArray = Array.from(msLs.querySelectorAll(".milestone")).map((card) => card.dataset.id);
+      fetch(`/api/userdata/guides/${guideId}/milestones/reorder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(msArray),
+      });
+    },
+  });
+  msLs.insertAdjacentHTML(
+    "beforeend",
+    `
+<md-text-button class="add-milestone-btn">
+    <md-icon slot="icon">add</md-icon>
+    Add Milestone
+</md-text-button>
+`,
+  );
+}
+
+async function renderGuideTasks(guideId, milestoneId) {
+  const guides = await getGuides("active");
+  const guide = guides.find((g) => g.id === guideId);
+
+  const msHTML = document.querySelector(`[data-id="${milestoneId}"]`);
+  const ms = guide.milestones.find((m) => m.id === milestoneId);
+
+  const taskLs = msHTML.querySelector(".guide-task-list");
+
+  taskLs.innerHTML = "";
+
+  for (let task of ms.tasks) {
+    const renderedTask = `
+  <div class="guide-task" data-id="${task.id}">
+    <md-icon class="task-drag-handle">drag_indicator</md-icon>
+    <md-checkbox ${task.done ? "checked" : ""}></md-checkbox>
+    <input class="guide-task-title ${task.done ? "done" : ""}" type="text" value="${task.title}" placeholder="Task title">
+    <div class="guide-task-actions">
+        <md-icon-button class="task-link-btn">
+            <md-icon>${task.link ? "link" : "link_off"}</md-icon>
+        </md-icon-button>
+        <md-icon-button class="delete-task-btn">
+            <md-icon>delete</md-icon>
         </md-icon-button>
     </div>
 </div>`;
 
-      msLs.insertAdjacentHTML("beforeend", renderedMS);
-    }
-    msLs.insertAdjacentHTML(
-      "beforeend",
-      `
-    <md-icon-button class="add-milestone-btn">
-        <md-icon>add</md-icon>
-    </md-icon-button>
-`,
-    );
-  } else {
-    return;
+    taskLs.insertAdjacentHTML("beforeend", renderedTask);
   }
+  Sortable.create(taskLs, {
+    handle: ".task-drag-handle",
+    animation: 150,
+    onEnd: (event) => {
+      const tasksArray = Array.from(taskLs.querySelectorAll(".guide-task")).map((card) => card.dataset.id);
+      fetch(`/api/userdata/guides/${guideId}/milestones/${milestoneId}/tasks/reorder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tasksArray),
+      });
+    },
+  });
+  taskLs.insertAdjacentHTML(
+    "beforeend",
+    `
+<md-text-button class="add-task-btn">
+    <md-icon slot="icon">add</md-icon>
+    Add Task
+</md-text-button>
+`,
+  );
 }
 
 // Frontend
@@ -243,6 +303,19 @@ let tabs;
 let isCreatingTask = false;
 
 document.addEventListener("DOMContentLoaded", () => {
+  document.querySelector("#guideList").addEventListener("click", (event) => {
+    const msExpandBtn = event.target.closest(".milestone-expand-btn");
+    if (!msExpandBtn) return;
+
+    const card = msExpandBtn.closest(".guide-card");
+    const milestone = msExpandBtn.closest(".milestone");
+    const taskList = milestone.querySelector(".guide-task-list");
+
+    msExpandBtn.classList.toggle("expanded");
+    taskList.style.display = taskList.style.display === "none" ? "block" : "none";
+    renderGuideTasks(card.dataset.id, milestone.dataset.id);
+  });
+
   document.querySelector("#guideList").addEventListener("click", (event) => {
     const guideExpandBtn = event.target.closest(".guide-expand-btn");
     if (!guideExpandBtn) return;
