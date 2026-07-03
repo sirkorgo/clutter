@@ -3,8 +3,9 @@
 
 ## About Clutter
 Clutter is a personal project I decided to make over the summer to help organize my school-life to prevent me from procrastinating.
-I designed it around what I personally need in my school-life, and these are the features:
+I designed it around what I personally need in my school-life. In other words, *its a glorified todo list i made, using claude as a tutor to help me learn javascript*
 
+Here's a feature list!
 - **Tasks**
   - Just a basic to-do list that integrates with my Canvas account so I can see all my assignments and other tasks in one place.
 - **Guides**
