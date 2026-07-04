@@ -477,6 +477,7 @@ function initSettingsListeners() {
       document.querySelector("#settings-email").value = settings.email;
       document.querySelector("#settings-theme").selected = settings.theme === "dark";
       document.querySelector("#pref-canvas-key").value = settings.canvas.apiKey;
+      document.querySelector("#pref-canvas-url").value = settings.canvas.url;
 
       document.querySelector("#pref-undone").selected = settings.defaultFilters.undone === true;
       document.querySelector("#pref-done").selected = settings.defaultFilters.done === true;
@@ -497,7 +498,10 @@ function initSettingsListeners() {
     const field = event.target.dataset.field;
     const value = event.target.value;
 
-    const body = field === "canvas.apiKey" ? { canvas: { apiKey: value } } : { [field]: value };
+    const body =
+      field === "canvas.apiKey" || field === "canvas.url"
+        ? { canvas: { [field.split(".")[1]]: value } }
+        : { [field]: value };
 
     fetch("/api/userdata/settings", {
       method: "PATCH",

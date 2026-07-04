@@ -80,6 +80,7 @@ async function initUser(userEmail) {
           clutter: true,
         },
         canvas: {
+          url: "",
           apiKey: "",
           iv: "",
         },
@@ -115,7 +116,9 @@ app.get("/api/userdata/settings", async (req, res) => {
       canvasAPIKey = decrypt(prefs.canvas.apiKey, prefs.canvas.iv, key);
     }
 
-    res.json({ ...prefs, canvas: { apiKey: canvasAPIKey } });
+    const canvasURL = prefs.canvas.url;
+
+    res.json({ ...prefs, canvas: { url: canvasURL, apiKey: canvasAPIKey } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -430,6 +433,64 @@ app.delete("/api/userdata/guides/:gid/milestones/:msid/tasks/:tid", async (req, 
   guide.milestones[msIndex].tasks = guide.milestones[msIndex].tasks.filter((t) => t.id !== req.params.tid);
   await fs.writeFile(guidesPath, JSON.stringify(guides, null, 2), "utf8");
   res.json({ status: "ok" });
+});
+
+// canvas integration
+app.post("/api/integrations/canvas/sync", requireAuth, async (req, res) => {
+  console.log("Canvas Sync Request initiated");
+  const userId = await getUser(req.userEmail);
+  const settingsPath = path.join(__dirname, "userdata", userId, "settings.json");
+  const prefs = JSON.parse(await fs.readFile(settingsPath, "utf8"));
+
+  const key = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
+  const canvasUrl = prefs.canvas.url;
+
+  let canvasAPIKey = "";
+  if (prefs.canvas.apiKey) {
+    canvasAPIKey = await decrypt(prefs.canvas.apiKey, prefs.canvas.iv, key);
+  } else {
+    console.log("no canvas api key found in user prefs");
+    return res.status(401).json({ error: "No valid Canvas API Key found in user settings. Please set an API Key." });
+  }
+
+  console.log("Got Canvas URL:", canvasUrl);
+
+  const courseData = await fetch(`${canvasUrl}/api/v1/courses`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${canvasAPIKey}`,
+    },
+  });
+  const courseList = await courseData.json();
+
+  const allTasks = [];
+
+  for (let course of courseList) {
+    if (!course.id) continue;
+
+    const courseTaskDat = await fetch(`${canvasUrl}/api/v1/courses/${course.id}/assignments`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${canvasAPIKey}`,
+      },
+    });
+    const assignments = await courseTaskDat.json();
+
+    if (Array.isArray(assignments)) {
+      for (let assignment of assignments) {
+        allTasks.push({
+          name: assignment.name,
+          id: assignment.id,
+          due: assignment.due_at,
+          done: assignment.has_submitted_submissions,
+          link: assignment.html_url,
+          courseName: course.name,
+        });
+      }
+    }
+  }
+
+  return res.json(allTasks);
 });
 
 // START
