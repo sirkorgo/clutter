@@ -1,33 +1,33 @@
 let guides = [];
 let guidesLoaded = false;
+let tabs;
+let isCreatingTask = false;
+let taskToDelete = null;
+let guideToDel = null;
+let msToDel = null;
+let guideTaskToDel = null;
 
-// API Endpoints
-async function getUserId() {
-  const response = await fetch("/api/userdata/getUserId", {
-    method: "POST",
-  });
-  const data = await response.json();
-  return data.userId;
-}
-
-async function getTasks() {
-  const response = await fetch("/api/userdata/tasks", {
-    method: "GET",
-  });
+// settings api
+async function getSettings() {
+  const response = await fetch("/api/userdata/settings");
   const data = await response.json();
   return data;
 }
 
-let taskToDelete = null;
+// tasks api
+async function getTasks() {
+  const response = await fetch("/api/userdata/tasks", { method: "GET" });
+  const data = await response.json();
+  return data;
+}
 
-// Content Functions
 async function renderTasks() {
   const taskData = await getTasks();
 
   taskData.sort((a, b) => {
-    if (!a.due) return 1; // no due date → push to bottom
-    if (!b.due) return -1; // no due date → push to bottom
-    return new Date(a.due) - new Date(b.due); // earlier date first
+    if (!a.due) return 1;
+    if (!b.due) return -1;
+    return new Date(a.due) - new Date(b.due);
   });
 
   const taskList = document.querySelector("#taskList");
@@ -44,14 +44,12 @@ async function renderTasks() {
   taskList.innerHTML = "";
   for (let task of taskData) {
     if (anyFilterActive) {
-      // Layer 1: type
       const typeFilterActive = filters.canvas || filters.local;
       if (typeFilterActive) {
         const matchesType = (filters.local && !task.canvas) || (filters.canvas && task.canvas);
         if (!matchesType) continue;
       }
 
-      // Layer 2: status
       const statusFilterActive = filters.notdone || filters.done;
       if (statusFilterActive) {
         const matchesStatus = (filters.notdone && !task.done) || (filters.done && task.done);
@@ -90,7 +88,6 @@ async function createNewTask() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
-
     await renderTasks();
   } catch (err) {
     console.error("createNewTask error:", err);
@@ -99,10 +96,7 @@ async function createNewTask() {
   isCreatingTask = false;
 }
 
-async function sendNewTask() {
-  const newTask = document.querySelector("#newTaskCard");
-}
-
+// guides api
 async function getGuides(type) {
   if (!guidesLoaded) {
     const response = await fetch("/api/userdata/guides", { method: "GET" });
@@ -119,11 +113,19 @@ function calcGuideProgress(guide) {
   let done = 0;
   for (let milestone of guide.milestones) {
     for (let task of milestone.tasks) {
-      total = total + 1;
-      if (task.done === true) {
-        done = done + 1;
-      }
+      total++;
+      if (task.done === true) done++;
     }
+  }
+  return total === 0 ? 0 : Math.round((done / total) * 100);
+}
+
+function calcMilestoneProgress(ms) {
+  let total = 0;
+  let done = 0;
+  for (let task of ms.tasks) {
+    total++;
+    if (task.done === true) done++;
   }
   return total === 0 ? 0 : Math.round((done / total) * 100);
 }
@@ -139,7 +141,7 @@ async function renderActiveGuides() {
     const renderedGuide = `<div class="guide-card" data-id="${guide.id}">
     <div class="guide-header">
         <md-icon class="guide-drag-handle">drag_indicator</md-icon>
-        <input class="guide-title" type="text" value="${guide.title}" placeholder="Guide title">
+        <input class="guide-title" type="text" data-field="title" value="${guide.title}" placeholder="Guide title">
         <code class="code-block">${guide.id}</code>
         <div class="guide-actions">
             <div class="progress-wrap">
@@ -156,16 +158,15 @@ async function renderActiveGuides() {
             </md-icon-button>
         </div>
     </div>
-
-    <div class="milestone-list" style="display: none;">
-    </div>
+    <div class="milestone-list" style="display: none;"></div>
 </div>`;
     guideList.insertAdjacentHTML("beforeend", renderedGuide);
   }
+
   Sortable.create(document.querySelector("#guideList"), {
     handle: ".guide-drag-handle",
     animation: 150,
-    onEnd: (event) => {
+    onEnd: () => {
       const guideArray = Array.from(document.querySelectorAll("#guideList .guide-card")).map((card) => card.dataset.id);
       fetch("/api/userdata/guides/reorder", {
         method: "PATCH",
@@ -176,14 +177,46 @@ async function renderActiveGuides() {
   });
 }
 
-function calcMilestoneProgress(ms) {
-  let total = 0;
-  let done = 0;
-  for (let task of ms.tasks) {
-    total = total + 1;
-    if (task.done === true) done = done + 1;
+async function renderArchivedGuides() {
+  const guides = await getGuides("archived");
+  const guideList = document.querySelector("#guideList");
+
+  guideList.innerHTML = "";
+
+  for (let guide of guides) {
+    const guideProgress = calcGuideProgress(guide);
+    const renderedGuide = `<div class="guide-card archived" data-id="${guide.id}">
+    <div class="guide-header">
+        <input class="guide-title" type="text" data-field="title" value="${guide.title}" placeholder="Guide title">
+        <code class="code-block">${guide.id}</code>
+        <div class="guide-actions">
+            <div class="progress-wrap">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${guideProgress}%"></div>
+                </div>
+                <span class="progress-pct">${guideProgress}%</span>
+            </div>
+            <md-icon-button class="unarchive-btn">
+                <md-icon>unarchive</md-icon>
+            </md-icon-button>
+            <md-icon-button class="guide-delete-btn">
+                <md-icon>delete</md-icon>
+            </md-icon-button>
+            <md-icon-button class="guide-expand-btn">
+                <md-icon>expand_more</md-icon>
+            </md-icon-button>
+        </div>
+    </div>
+    <div class="milestone-list" style="display: none;"></div>
+</div>`;
+    guideList.insertAdjacentHTML("beforeend", renderedGuide);
   }
-  return total === 0 ? 0 : Math.round((done / total) * 100);
+}
+
+async function createMs(guideId) {
+  await fetch(`/api/userdata/guides/${guideId}/milestones`, { method: "POST" });
+  guidesLoaded = false;
+  renderMilestones(guideId);
 }
 
 async function renderMilestones(guideId) {
@@ -194,10 +227,11 @@ async function renderMilestones(guideId) {
   const msLs = guideHTML.querySelector(".milestone-list");
 
   msLs.innerHTML = "";
+
   for (let ms of guide.milestones) {
     const milestoneProgress = calcMilestoneProgress(ms);
     const renderedMS = `
-  <div class="milestone" data-id="${ms.id}">
+<div class="milestone" data-id="${ms.id}">
     <div class="milestone-header">
         <md-icon class="ms-drag-handle">drag_indicator</md-icon>
         <input class="milestone-title" type="text" value="${ms.title}" placeholder="Milestone title">
@@ -217,17 +251,16 @@ async function renderMilestones(guideId) {
             </md-icon-button>
         </div>
     </div>
-    <div class="guide-task-list" style="display: none;">
-    </div>
+    <div class="guide-task-list" style="display: none;"></div>
 </div>`;
-
     msLs.insertAdjacentHTML("beforeend", renderedMS);
   }
+
   Sortable.create(msLs, {
     handle: ".ms-drag-handle",
     animation: 150,
-    onEnd: (event) => {
-      const msArray = Array.from(msLs.querySelectorAll(".milestone")).map((card) => card.dataset.id);
+    onEnd: () => {
+      const msArray = Array.from(msLs.querySelectorAll(".milestone")).map((m) => m.dataset.id);
       fetch(`/api/userdata/guides/${guideId}/milestones/reorder`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -235,14 +268,14 @@ async function renderMilestones(guideId) {
       });
     },
   });
+
   msLs.insertAdjacentHTML(
     "beforeend",
     `
 <md-text-button class="add-milestone-btn">
     <md-icon slot="icon">add</md-icon>
     Add Milestone
-</md-text-button>
-`,
+</md-text-button>`,
   );
 }
 
@@ -252,14 +285,13 @@ async function renderGuideTasks(guideId, milestoneId) {
 
   const msHTML = document.querySelector(`[data-id="${milestoneId}"]`);
   const ms = guide.milestones.find((m) => m.id === milestoneId);
-
   const taskLs = msHTML.querySelector(".guide-task-list");
 
   taskLs.innerHTML = "";
 
   for (let task of ms.tasks) {
     const renderedTask = `
-  <div class="guide-task" data-id="${task.id}">
+<div class="guide-task" data-id="${task.id}">
     <md-icon class="task-drag-handle">drag_indicator</md-icon>
     <md-checkbox ${task.done ? "checked" : ""}></md-checkbox>
     <input class="guide-task-title ${task.done ? "done" : ""}" type="text" value="${task.title}" placeholder="Task title">
@@ -272,14 +304,14 @@ async function renderGuideTasks(guideId, milestoneId) {
         </md-icon-button>
     </div>
 </div>`;
-
     taskLs.insertAdjacentHTML("beforeend", renderedTask);
   }
+
   Sortable.create(taskLs, {
     handle: ".task-drag-handle",
     animation: 150,
-    onEnd: (event) => {
-      const tasksArray = Array.from(taskLs.querySelectorAll(".guide-task")).map((card) => card.dataset.id);
+    onEnd: () => {
+      const tasksArray = Array.from(taskLs.querySelectorAll(".guide-task")).map((t) => t.dataset.id);
       fetch(`/api/userdata/guides/${guideId}/milestones/${milestoneId}/tasks/reorder`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -287,146 +319,24 @@ async function renderGuideTasks(guideId, milestoneId) {
       });
     },
   });
+
   taskLs.insertAdjacentHTML(
     "beforeend",
     `
 <md-text-button class="add-task-btn">
     <md-icon slot="icon">add</md-icon>
     Add Task
-</md-text-button>
-`,
+</md-text-button>`,
   );
 }
 
 async function createNewGuide() {
-  const newGuide = await fetch("/api/userdata/guides", { method: "POST" });
+  await fetch("/api/userdata/guides", { method: "POST" });
   guidesLoaded = false;
   await renderActiveGuides();
 }
 
-// Frontend
-let tabs;
-let isCreatingTask = false;
-
-document.addEventListener("DOMContentLoaded", () => {
-  document.querySelector("#new-guide-btn").addEventListener("click", (event) => {
-    createNewGuide();
-  });
-
-  document.querySelector("#guideList").addEventListener("click", (event) => {
-    const msExpandBtn = event.target.closest(".milestone-expand-btn");
-    if (!msExpandBtn) return;
-
-    const card = msExpandBtn.closest(".guide-card");
-    const milestone = msExpandBtn.closest(".milestone");
-    const taskList = milestone.querySelector(".guide-task-list");
-
-    msExpandBtn.classList.toggle("expanded");
-    taskList.style.display = taskList.style.display === "none" ? "block" : "none";
-    renderGuideTasks(card.dataset.id, milestone.dataset.id);
-  });
-
-  document.querySelector("#guideList").addEventListener("click", (event) => {
-    const guideExpandBtn = event.target.closest(".guide-expand-btn");
-    if (!guideExpandBtn) return;
-
-    const card = guideExpandBtn.closest(".guide-card");
-    const milestoneList = card.querySelector(".milestone-list");
-
-    guideExpandBtn.classList.toggle("expanded");
-    milestoneList.style.display = milestoneList.style.display === "none" ? "block" : "none";
-    renderMilestones(card.dataset.id);
-  });
-
-  getSettings().then((settings) => {
-    document.querySelector("#account-info div").innerHTML = `${settings.nickname}<br><small>${settings.email}</small>`;
-  });
-
-  document.querySelector("#account-btn").addEventListener("click", () => {
-    const menu = document.querySelector("#account-menu");
-    menu.open = !menu.open;
-  });
-
-  document.querySelector("#settings-btn").addEventListener("click", () => {
-    getSettings().then((settings) => {
-      const nickname = document.querySelector("#settings-nickname");
-      const email = document.querySelector("#settings-email");
-      const theme = document.querySelector("#settings-theme");
-      const taskFilters = {
-        undone: document.querySelector("#pref-undone"),
-        done: document.querySelector("#pref-done"),
-        clutter: document.querySelector("#pref-clutter"),
-        canvas: document.querySelector("#pref-canvas"),
-      };
-      const pref_canvas_key = document.querySelector("#pref-canvas-key");
-
-      nickname.value = settings.nickname;
-      email.value = settings.email;
-      theme.selected = settings.theme === "dark";
-      pref_canvas_key.value = settings.canvas.apiKey;
-
-      taskFilters.undone.selected = settings.defaultFilters.undone === true;
-      taskFilters.done.selected = settings.defaultFilters.done === true;
-      taskFilters.canvas.selected = settings.defaultFilters.canvas === true;
-      taskFilters.clutter.selected = settings.defaultFilters.clutter === true;
-
-      document.querySelector("#settings-modal").show();
-    });
-  });
-
-  document.querySelector("#settings-close").addEventListener("click", () => {
-    document.querySelector("#settings-modal").close();
-  });
-
-  document.querySelector("#signout-btn").addEventListener("click", () => {
-    window.location.href = "/oauth2/sign_out";
-  });
-
-  tabs = document.querySelector("md-tabs");
-  tabs.addEventListener("change", () => {
-    let pgNames = ["summary", "tasks", "guides"];
-    let active = tabs.activeTabIndex;
-    let name = pgNames[active];
-    if (window.location.hash !== `#${name}`) {
-      window.location.hash = name;
-    }
-  });
-  showPage();
-
-  document.querySelector("#new-task-btn").addEventListener("click", () => {
-    createNewTask();
-  });
-
-  document.querySelector("#taskList").addEventListener("click", (event) => {
-    const deleteBtn = event.target.closest(".delete-btn");
-    if (!deleteBtn) return;
-
-    const card = deleteBtn.closest(".card");
-    taskToDelete = card.dataset.id;
-
-    document.querySelector("#delete-confirm").show();
-  });
-
-  document.querySelector("#delete-cancel").addEventListener("click", () => {
-    document.querySelector("#delete-confirm").close();
-    taskToDelete = null;
-  });
-
-  document.querySelector("#delete-confirm-btn").addEventListener("click", async () => {
-    if (!taskToDelete) return;
-    document.querySelector("#delete-confirm").close();
-
-    await fetch("/api/userdata/tasks/" + taskToDelete, {
-      method: "DELETE",
-    });
-
-    taskToDelete = null;
-    await renderTasks();
-  });
-});
-
-window.addEventListener("hashchange", showPage);
-
+// nav
 function showPage() {
   let hash = window.location.hash.replace("#", "");
   if (hash === "") {
@@ -434,16 +344,10 @@ function showPage() {
     window.location.hash = "summary";
   }
 
-  let pages = document.querySelectorAll(".page");
-
+  const pages = document.querySelectorAll(".page");
+  for (let page of pages) page.classList.remove("active");
   for (let page of pages) {
-    page.classList.remove("active");
-  }
-
-  for (let page of pages) {
-    if (page.id === hash) {
-      page.classList.add("active");
-    }
+    if (page.id === hash) page.classList.add("active");
   }
 
   const pgNames = ["summary", "tasks", "guides"];
@@ -466,101 +370,328 @@ async function runPageScripts(hash) {
   }
 
   if (hash === "guides") {
+    guidesLoaded = false;
     await renderActiveGuides();
+    document.querySelector("#active-guide-btn").selected = true;
+    document.querySelector("#archived-guide-btn").selected = false;
   }
 }
 
-async function getSettings() {
-  const response = await fetch("/api/userdata/settings");
-  const data = await response.json();
-  return data;
+window.addEventListener("hashchange", showPage);
+
+// init
+function initSettingsListeners() {
+  document.querySelector("#settings-btn").addEventListener("click", () => {
+    getSettings().then((settings) => {
+      document.querySelector("#settings-nickname").value = settings.nickname;
+      document.querySelector("#settings-email").value = settings.email;
+      document.querySelector("#settings-theme").selected = settings.theme === "dark";
+      document.querySelector("#pref-canvas-key").value = settings.canvas.apiKey;
+
+      document.querySelector("#pref-undone").selected = settings.defaultFilters.undone === true;
+      document.querySelector("#pref-done").selected = settings.defaultFilters.done === true;
+      document.querySelector("#pref-canvas").selected = settings.defaultFilters.canvas === true;
+      document.querySelector("#pref-clutter").selected = settings.defaultFilters.clutter === true;
+
+      document.querySelector("#settings-modal").show();
+    });
+  });
+
+  document.querySelector("#settings-close").addEventListener("click", () => {
+    document.querySelector("#settings-modal").close();
+  });
+
+  document.querySelector("#settings-modal").addEventListener("focusout", (event) => {
+    if (event.target.tagName !== "MD-OUTLINED-TEXT-FIELD" || event.target.id === "settings-email") return;
+
+    const field = event.target.dataset.field;
+    const value = event.target.value;
+
+    const body = field === "canvas.apiKey" ? { canvas: { apiKey: value } } : { [field]: value };
+
+    fetch("/api/userdata/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  });
+
+  document.querySelector("#settings-modal").addEventListener("change", (event) => {
+    if (event.target.tagName !== "MD-SWITCH") return;
+
+    fetch("/api/userdata/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme: event.target.selected ? "dark" : "light" }),
+    });
+  });
+
+  document.querySelector("#settings-modal").addEventListener("click", (event) => {
+    if (event.target.tagName !== "MD-FILTER-CHIP") return;
+
+    fetch("/api/userdata/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ defaultFilters: { [event.target.dataset.field]: event.target.selected } }),
+    });
+  });
 }
 
-let saveTimer;
-
-document.querySelector("#taskList").addEventListener("focusout", (event) => {
-  if (!event.target.dataset.field) return;
-  const card = event.target.closest(".card");
-  if (!card) return;
-  const taskId = card.dataset.id;
-  const field = event.target.dataset.field;
-  const value = event.target.value;
-
-  fetch("/api/userdata/tasks/" + taskId, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ [field]: value }),
-  }).then(() => renderTasks());
-});
-
-document.querySelector("#taskList").addEventListener("change", (event) => {
-  if (event.target.tagName !== "MD-CHECKBOX") return;
-  const card = event.target.closest(".card");
-  const taskId = card.dataset.id;
-
-  fetch("/api/userdata/tasks/" + taskId, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ done: event.target.checked }),
-  }).then(() => setTimeout(() => renderTasks(), 500));
-});
-
-document.querySelector(".content-area").addEventListener("click", (event) => {
-  if (event.target.tagName !== "MD-FILTER-CHIP") return;
-  setTimeout(() => renderTasks(), 50);
-});
-
-document.querySelector("#settings-modal").addEventListener("focusout", (event) => {
-  if (event.target.tagName !== "MD-OUTLINED-TEXT-FIELD" || event.target.id === "settings-email") return;
-
-  const field = event.target.dataset.field;
-  const value = event.target.value;
-
-  let body;
-  if (field === "canvas.apiKey") {
-    body = { canvas: { apiKey: value } };
-  } else {
-    body = { [field]: value };
-  }
-
-  fetch("/api/userdata/settings", {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+function initTaskListeners() {
+  document.querySelector("#new-task-btn").addEventListener("click", () => {
+    createNewTask();
   });
-});
 
-document.querySelector("#settings-modal").addEventListener("change", (event) => {
-  if (event.target.tagName !== "MD-SWITCH") return;
+  document.querySelector(".content-area").addEventListener("click", (event) => {
+    if (event.target.tagName !== "MD-FILTER-CHIP") return;
+    setTimeout(() => renderTasks(), 50);
+  });
 
-  const selected = event.target.selected;
+  document.querySelector("#taskList").addEventListener("focusout", (event) => {
+    if (!event.target.dataset.field) return;
+    const card = event.target.closest(".card");
+    if (!card) return;
 
-  let body;
-  if (event.target.selected === true) {
-    body = { theme: "dark" };
-  } else body = { theme: "light" };
+    const taskId = card.dataset.id;
+    const field = event.target.dataset.field;
+    const value = event.target.value;
 
-  fetch("/api/userdata/settings", {
+    fetch("/api/userdata/tasks/" + taskId, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    }).then(() => renderTasks());
+  });
+
+  document.querySelector("#taskList").addEventListener("change", (event) => {
+    if (event.target.tagName !== "MD-CHECKBOX") return;
+    const card = event.target.closest(".card");
+    const taskId = card.dataset.id;
+
+    fetch("/api/userdata/tasks/" + taskId, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ done: event.target.checked }),
+    }).then(() => setTimeout(() => renderTasks(), 500));
+  });
+
+  document.querySelector("#taskList").addEventListener("click", (event) => {
+    const deleteBtn = event.target.closest(".delete-btn");
+    if (!deleteBtn) return;
+
+    const card = deleteBtn.closest(".card");
+    taskToDelete = card.dataset.id;
+    document.querySelector("#delete-confirm").show();
+  });
+
+  document.querySelector("#delete-cancel").addEventListener("click", () => {
+    document.querySelector("#delete-confirm").close();
+    taskToDelete = null;
+  });
+
+  document.querySelector("#delete-confirm-btn").addEventListener("click", async () => {
+    if (!taskToDelete) return;
+    document.querySelector("#delete-confirm").close();
+
+    await fetch("/api/userdata/tasks/" + taskToDelete, { method: "DELETE" });
+
+    taskToDelete = null;
+    await renderTasks();
+  });
+}
+
+function initGuideListeners() {
+  document.querySelector("#new-guide-btn").addEventListener("click", () => {
+    createNewGuide();
+  });
+
+  document.querySelector("#active-guide-btn").addEventListener("click", () => {
+    document.querySelector("#active-guide-btn").selected = true;
+    document.querySelector("#archived-guide-btn").selected = false;
+    guidesLoaded = false;
+    renderActiveGuides();
+  });
+
+  document.querySelector("#archived-guide-btn").addEventListener("click", () => {
+    document.querySelector("#active-guide-btn").selected = false;
+    document.querySelector("#archived-guide-btn").selected = true;
+    guidesLoaded = false;
+    renderArchivedGuides();
+  });
+
+  // guide expand
+  document.querySelector("#guideList").addEventListener("click", (event) => {
+    const guideExpandBtn = event.target.closest(".guide-expand-btn");
+    if (!guideExpandBtn) return;
+
+    const card = guideExpandBtn.closest(".guide-card");
+    const milestoneList = card.querySelector(".milestone-list");
+
+    guideExpandBtn.classList.toggle("expanded");
+    milestoneList.style.display = milestoneList.style.display === "none" ? "block" : "none";
+    renderMilestones(card.dataset.id);
+  });
+
+  // milestone expand
+  document.querySelector("#guideList").addEventListener("click", (event) => {
+    const msExpandBtn = event.target.closest(".milestone-expand-btn");
+    if (!msExpandBtn) return;
+
+    const card = msExpandBtn.closest(".guide-card");
+    const milestone = msExpandBtn.closest(".milestone");
+    const taskList = milestone.querySelector(".guide-task-list");
+
+    msExpandBtn.classList.toggle("expanded");
+    taskList.style.display = taskList.style.display === "none" ? "block" : "none";
+    renderGuideTasks(card.dataset.id, milestone.dataset.id);
+  });
+
+  // milestone add
+  document.querySelector("#guideList").addEventListener("click", (event) => {
+    const msCreateBtn = event.target.closest(".add-milestone-btn");
+    if (!msCreateBtn) return;
+
+    const guideId = msCreateBtn.closest(".guide-card").dataset.id;
+
+    createMs(guideId);
+  });
+
+  // milestone rm
+  document.querySelector("#guideList").addEventListener("click", (event) => {
+    const msDelBtn = event.target.closest(".delete-milestone-btn");
+    if (!msDelBtn) return;
+
+    const guideId = msDelBtn.closest(".guide-card").dataset.id;
+    const msId = msDelBtn.closest(".milestone").dataset.id;
+    msToDel = msId;
+    guideToDel = guideId;
+    document.querySelector("#ms-delete-confirm").show();
+  });
+
+  document.querySelector("#ms-delete-cancel").addEventListener("click", () => {
+    document.querySelector("#ms-delete-confirm").close();
+    msToDel = null;
+    guideToDel = null;
+  });
+
+  document.querySelector("#ms-delete-confirm-btn").addEventListener("click", async () => {
+    if (!msToDel) return;
+    document.querySelector("#ms-delete-confirm").close();
+
+    await fetch(`/api/userdata/guides/${guideToDel}/milestones/${msToDel}`, { method: "DELETE" });
+
+    guideToDel = null;
+    msToDel = null;
+    guidesLoaded = false;
+    await renderActiveGuides();
+  });
+}
+
+// guide title save
+document.querySelector("#guideList").addEventListener("focusout", (event) => {
+  if (!event.target.classList.contains("guide-title")) return;
+  const guide = event.target.closest(".guide-card");
+  if (!guide) return;
+
+  fetch("/api/userdata/guides/" + guide.dataset.id, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ title: event.target.value }),
   });
+  setTimeout(() => {
+    guidesLoaded = false;
+    renderActiveGuides();
+  }, 700);
 });
 
-document.querySelector("#settings-modal").addEventListener("click", (event) => {
-  if (event.target.tagName !== "MD-FILTER-CHIP") return;
+// archive
+document.querySelector("#guideList").addEventListener("click", (event) => {
+  if (!event.target.classList.contains("archive-btn")) return;
+  const guide = event.target.closest(".guide-card");
+  if (!guide) return;
 
-  const selected = event.target.selected;
-  const field = event.target.dataset.field;
-  const value = event.target.selected;
-
-  console.log(event.target.tagName, field, value);
-
-  let body = { defaultFilters: { [field]: value } };
-
-  fetch("/api/userdata/settings", {
+  fetch("/api/userdata/guides/" + guide.dataset.id, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ archived: true }),
   });
+  setTimeout(() => {
+    guidesLoaded = false;
+    renderActiveGuides();
+  }, 300);
+});
+
+// unarchive
+document.querySelector("#guideList").addEventListener("click", (event) => {
+  if (!event.target.classList.contains("unarchive-btn")) return;
+  const guide = event.target.closest(".guide-card");
+  if (!guide) return;
+
+  fetch("/api/userdata/guides/" + guide.dataset.id, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ archived: false }),
+  });
+  setTimeout(() => {
+    guidesLoaded = false;
+    renderArchivedGuides();
+  }, 300);
+});
+
+// delete guide (archived)
+document.querySelector("#guideList").addEventListener("click", (event) => {
+  if (!event.target.classList.contains("guide-delete-btn")) return;
+  const guide = event.target.closest(".guide-card");
+  if (!guide) return;
+
+  document.querySelector("#guide-delete-confirm").show();
+  guideToDel = guide.dataset.id;
+});
+
+document.querySelector("#guide-delete-cancel").addEventListener("click", () => {
+  document.querySelector("#guide-delete-confirm").close();
+  guideToDel = null;
+});
+
+document.querySelector("#guide-delete-confirm-btn").addEventListener("click", async () => {
+  if (!guideToDel) return;
+  document.querySelector("#guide-delete-confirm").close();
+
+  await fetch("/api/userdata/guides/" + guideToDel, { method: "DELETE" });
+
+  guideToDel = null;
+  guidesLoaded = false;
+  await renderArchivedGuides();
+});
+
+function initAccountListeners() {
+  getSettings().then((settings) => {
+    document.querySelector("#account-info div").innerHTML = `${settings.nickname}<br><small>${settings.email}</small>`;
+  });
+
+  document.querySelector("#account-btn").addEventListener("click", () => {
+    const menu = document.querySelector("#account-menu");
+    menu.open = !menu.open;
+  });
+
+  document.querySelector("#signout-btn").addEventListener("click", () => {
+    window.location.href = "/oauth2/sign_out";
+  });
+}
+
+// load
+document.addEventListener("DOMContentLoaded", () => {
+  tabs = document.querySelector("md-tabs");
+  tabs.addEventListener("change", () => {
+    const pgNames = ["summary", "tasks", "guides"];
+    const name = pgNames[tabs.activeTabIndex];
+    if (window.location.hash !== `#${name}`) window.location.hash = name;
+  });
+
+  initAccountListeners();
+  initSettingsListeners();
+  initTaskListeners();
+  initGuideListeners();
+
+  showPage();
 });
