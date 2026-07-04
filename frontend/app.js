@@ -6,6 +6,9 @@ let taskToDelete = null;
 let guideToDel = null;
 let msToDel = null;
 let guideTaskToDel = null;
+let activeLinkGuideId = null;
+let activeLinkMsId = null;
+let activeLinkTaskId = null;
 
 // settings api
 async function getSettings() {
@@ -165,7 +168,7 @@ async function renderActiveGuides() {
     const renderedGuide = `<div class="guide-card" data-id="${guide.id}">
     <div class="guide-header">
         <md-icon class="guide-drag-handle">drag_indicator</md-icon>
-        <input class="guide-title" type="text" data-field="title" value="${guide.title}" placeholder="Guide title">
+        <input class="guide-title" type="text" data-field="title" value="${guide.title}" placeholder="Unnamed Guide">
         <code class="code-block">${guide.id}</code>
         <div class="guide-actions">
             <div class="progress-wrap">
@@ -377,7 +380,7 @@ async function renderGuideTasks(guideId, milestoneId, expanded) {
 <div class="guide-task" data-id="${task.id}">
     <md-icon class="task-drag-handle">drag_indicator</md-icon>
     <md-checkbox ${task.done ? "checked" : ""}></md-checkbox>
-    <input class="guide-task-title ${task.done ? "done" : ""}" type="text" value="${task.title}" placeholder="Task title">
+    <input class="guide-task-title ${task.done ? "done" : ""}" type="text" value="${task.title}" placeholder="Unnamed Task">
     <div class="guide-task-actions">
         <md-icon-button class="task-link-btn">
             <md-icon>${task.link ? "link" : "link_off"}</md-icon>
@@ -706,10 +709,6 @@ document.querySelector("#guideList").addEventListener("focusout", (event) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title: event.target.value }),
   });
-  setTimeout(() => {
-    guidesLoaded = false;
-    renderActiveGuides();
-  }, 700);
 });
 
 // archive
@@ -798,7 +797,10 @@ document.querySelector("#guideList").addEventListener("change", async (event) =>
   await fetch(`/api/userdata/guides/${guideId}/milestones/${msId}/tasks/${tskId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ done: event.target.checked }),
+    body: JSON.stringify({
+      done: event.target.checked,
+      completedAt: event.target.checked ? new Date().toISOString() : null,
+    }),
   });
 
   guidesLoaded = false;
@@ -807,6 +809,120 @@ document.querySelector("#guideList").addEventListener("change", async (event) =>
 
   const taskTitle = event.target.closest(".guide-task").querySelector(".guide-task-title");
   taskTitle.classList.toggle("done", event.target.checked);
+});
+
+// task link
+document.querySelector("#guideList").addEventListener("click", async (event) => {
+  const linkBtn = event.target.closest(".task-link-btn");
+  if (!linkBtn) return;
+
+  const guideId = event.target.closest(".guide-card").dataset.id;
+  const msId = event.target.closest(".milestone").dataset.id;
+  const tskId = event.target.closest(".guide-task").dataset.id;
+
+  const guide = guides.find((g) => g.id === guideId);
+  const ms = guide.milestones.find((m) => m.id === msId);
+  const task = ms.tasks.find((t) => t.id === tskId);
+  const link = task.link;
+
+  activeLinkGuideId = guideId;
+  activeLinkMsId = msId;
+  activeLinkTaskId = tskId;
+
+  if (!link) {
+    document.querySelector("#link-input").value = "";
+    document.querySelector("#link-edit-dialog").show();
+  }
+
+  if (link) {
+    linkBtn.id = "active-link-anchor";
+    const menu = document.querySelector("#link-menu");
+    menu.anchorElement = linkBtn;
+    menu.open = true;
+  }
+});
+
+// open
+document.querySelector("#link-open").addEventListener("click", () => {
+  const guide = guides.find((g) => g.id === activeLinkGuideId);
+  const ms = guide.milestones.find((m) => m.id === activeLinkMsId);
+  const task = ms.tasks.find((t) => t.id === activeLinkTaskId);
+  const link = task.link;
+  window.open(link);
+});
+
+// edit
+document.querySelector("#link-edit").addEventListener("click", () => {
+  const guide = guides.find((g) => g.id === activeLinkGuideId);
+  const ms = guide.milestones.find((m) => m.id === activeLinkMsId);
+  const task = ms.tasks.find((t) => t.id === activeLinkTaskId);
+  const link = task.link;
+
+  document.querySelector("#link-input").value = link;
+  document.querySelector("#link-edit-dialog").show();
+});
+
+// save
+document.querySelector("#link-save").addEventListener("click", async () => {
+  let url = document.querySelector("#link-input").value;
+  if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+    url = "https://" + url;
+  }
+
+  const guide = guides.find((g) => g.id === activeLinkGuideId);
+  const ms = guide.milestones.find((m) => m.id === activeLinkMsId);
+  const task = ms.tasks.find((t) => t.id === activeLinkTaskId);
+  const link = task.link;
+
+  await fetch(`/api/userdata/guides/${activeLinkGuideId}/milestones/${activeLinkMsId}/tasks/${activeLinkTaskId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ link: url }),
+  });
+  guidesLoaded = false;
+  await renderGuideTasks(activeLinkGuideId, activeLinkMsId, true);
+  document.querySelector("#link-edit-dialog").close();
+  activeLinkGuideId = null;
+  activeLinkMsId = null;
+  activeLinkTaskId = null;
+});
+
+// exit dialog
+document.querySelector("#link-cancel").addEventListener("click", () => {
+  document.querySelector("#link-edit-dialog").close();
+  activeLinkGuideId = null;
+  activeLinkMsId = null;
+  activeLinkTaskId = null;
+});
+
+document.querySelector("#link-edit").addEventListener("click", () => {
+  const guide = guides.find((g) => g.id === activeLinkGuideId);
+  const ms = guide.milestones.find((m) => m.id === activeLinkMsId);
+  const task = ms.tasks.find((t) => t.id === activeLinkTaskId);
+  const link = task.link;
+
+  document.querySelector("#link-input").value = link;
+  document.querySelector("#link-edit-dialog").show();
+});
+
+document.querySelector("#link-remove").addEventListener("click", async () => {
+  const guide = guides.find((g) => g.id === activeLinkGuideId);
+  const ms = guide.milestones.find((m) => m.id === activeLinkMsId);
+  const task = ms.tasks.find((t) => t.id === activeLinkTaskId);
+  const link = task.link;
+
+  fetch(`/api/userdata/guides/${activeLinkGuideId}/milestones/${activeLinkMsId}/tasks/${activeLinkTaskId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ link: "" }),
+  });
+  setTimeout(() => {
+    guidesLoaded = false;
+    renderGuideTasks(activeLinkGuideId, activeLinkMsId, true);
+    activeLinkGuideId = null;
+    activeLinkMsId = null;
+    activeLinkTaskId = null;
+  }, 300);
 });
 
 // task rm

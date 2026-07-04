@@ -169,21 +169,22 @@
       </div>
     </md-dialog>
 
-    <!-- Link menu (when link exists) -->
-    <md-menu id="link-menu">
-      <md-menu-item id="link-open">
-        <md-icon slot="start">open_in_new</md-icon>
-        <div slot="headline">Open Link</div>
-      </md-menu-item>
-      <md-menu-item id="link-edit">
-        <md-icon slot="start">edit</md-icon>
-        <div slot="headline">Edit Link</div>
-      </md-menu-item>
-      <md-menu-item id="link-remove">
-        <md-icon slot="start">link_off</md-icon>
-        <div slot="headline">Remove Link</div>
-      </md-menu-item>
-    </md-menu>
+    <div style="position: relative">
+      <md-menu positioning="popover" id="link-menu">
+        <md-menu-item id="link-open">
+          <md-icon slot="start">open_in_new</md-icon>
+          <div slot="headline">Open Link</div>
+        </md-menu-item>
+        <md-menu-item id="link-edit">
+          <md-icon slot="start">edit</md-icon>
+          <div slot="headline">Edit Link</div>
+        </md-menu-item>
+        <md-menu-item id="link-remove">
+          <md-icon slot="start">link_off</md-icon>
+          <div slot="headline">Remove Link</div>
+        </md-menu-item>
+      </md-menu>
+    </div>
     <md-dialog id="delete-confirm">
       <div slot="headline">Delete Task?</div>
       <div slot="content">This can't be undone.</div>

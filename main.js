@@ -80,8 +80,8 @@ async function initUser(userEmail) {
           clutter: true,
         },
         canvas: {
-          apiKey: "1392e7e9be5cc750fd768ed03d6dcf46",
-          iv: "9ba9e05536b1c6d165e577ae3f8e8e45",
+          apiKey: "",
+          iv: "",
         },
       },
       null,
@@ -380,6 +380,7 @@ app.post("/api/userdata/guides/:gid/milestones/:msid/tasks", async (req, res) =>
     title: "",
     done: false,
     link: "",
+    completedAt: null,
   };
 
   guides[guideIndex].milestones[msIndex].tasks.push(newTask);

@@ -177,3 +177,7 @@ md-outlined-text-field {
     align-items: start;
   }
 }
+
+#link-menu {
+  z-index: 1000;
+}
