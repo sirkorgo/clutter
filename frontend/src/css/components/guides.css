@@ -73,6 +73,14 @@
   transform: rotate(180deg);
 }
 
+.milestone-title-archived {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--md-sys-color-outline);
+  font-style: italic;
+  padding: 2px 4px;
+}
+
 /* ================================
    PROGRESS BAR
    ================================ */
@@ -112,7 +120,7 @@
   margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   padding-left: 24px;
 }
 
@@ -173,6 +181,10 @@
   flex-direction: column;
   gap: 4px;
   padding-left: 16px;
+  border: 1px dashed grey;
+  border-radius: 10px;
+  padding: 5px;
+  padding-top: 0 !important;
 }
 
 .guide-task {

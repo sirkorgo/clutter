@@ -97,6 +97,26 @@ async function createNewTask() {
 }
 
 // guides api
+function updateAllProgress() {
+  for (let guide of guides) {
+    const card = document.querySelector(`[data-id="${guide.id}"]`);
+    if (!card) continue;
+
+    const guideProgress = calcGuideProgress(guide);
+    card.querySelector(".progress-fill").style.width = `${guideProgress}%`;
+    card.querySelector(".progress-pct").textContent = `${guideProgress}%`;
+
+    for (let ms of guide.milestones) {
+      const msCard = document.querySelector(`[data-id="${ms.id}"]`);
+      if (!msCard) continue;
+
+      const msProgress = calcMilestoneProgress(ms);
+      msCard.querySelector(".progress-fill").style.width = `${msProgress}%`;
+      msCard.querySelector(".progress-pct").textContent = `${msProgress}%`;
+    }
+  }
+}
+
 async function getGuides(type) {
   if (!guidesLoaded) {
     const response = await fetch("/api/userdata/guides", { method: "GET" });
@@ -133,6 +153,10 @@ function calcMilestoneProgress(ms) {
 async function renderActiveGuides() {
   const guides = await getGuides("active");
   const guideList = document.querySelector("#guideList");
+
+  const expandedGuides = Array.from(document.querySelectorAll(".guide-card"))
+    .filter((card) => card.querySelector(".milestone-list").style.display !== "none")
+    .map((card) => card.dataset.id);
 
   guideList.innerHTML = "";
 
@@ -175,6 +199,11 @@ async function renderActiveGuides() {
       });
     },
   });
+  for (let id of expandedGuides) {
+    const card = document.querySelector(`[data-id="${id}"]`);
+    if (!card) continue;
+    await renderMilestones(id, true);
+  }
 }
 
 async function renderArchivedGuides() {
@@ -202,7 +231,7 @@ async function renderArchivedGuides() {
             <md-icon-button class="guide-delete-btn">
                 <md-icon>delete</md-icon>
             </md-icon-button>
-            <md-icon-button class="guide-expand-btn">
+            <md-icon-button class="archived-guide-expand-btn">
                 <md-icon>expand_more</md-icon>
             </md-icon-button>
         </div>
@@ -216,16 +245,19 @@ async function renderArchivedGuides() {
 async function createMs(guideId) {
   await fetch(`/api/userdata/guides/${guideId}/milestones`, { method: "POST" });
   guidesLoaded = false;
-  renderMilestones(guideId);
+  renderMilestones(guideId, true);
 }
 
-async function renderMilestones(guideId) {
+async function renderMilestones(guideId, expanded) {
   const guides = await getGuides("active");
   const guide = guides.find((g) => g.id === guideId);
 
   const guideHTML = document.querySelector(`[data-id="${guideId}"]`);
   const msLs = guideHTML.querySelector(".milestone-list");
 
+  const expandedMs = Array.from(document.querySelectorAll(".milestone"))
+    .filter((card) => card.querySelector(".guide-task-list").style.display !== "none")
+    .map((card) => card.dataset.id);
   msLs.innerHTML = "";
 
   for (let ms of guide.milestones) {
@@ -234,7 +266,7 @@ async function renderMilestones(guideId) {
 <div class="milestone" data-id="${ms.id}">
     <div class="milestone-header">
         <md-icon class="ms-drag-handle">drag_indicator</md-icon>
-        <input class="milestone-title" type="text" value="${ms.title}" placeholder="Milestone title">
+        <input class="milestone-title" type="text" value="${ms.title}" placeholder="Unnamed Milestone">
         <code class="code-block">${ms.id}</code>
         <div class="milestone-actions">
             <div class="progress-wrap">
@@ -277,9 +309,60 @@ async function renderMilestones(guideId) {
     Add Milestone
 </md-text-button>`,
   );
+
+  if (expanded) {
+    msLs.style.display = "block";
+    guideHTML.querySelector(".guide-expand-btn").classList.add("expanded");
+  }
+  for (let msId of expandedMs) {
+    await renderGuideTasks(guideId, msId, true);
+  }
 }
 
-async function renderGuideTasks(guideId, milestoneId) {
+async function renderArchivedMilestones(guideId, expanded) {
+  const guides = await getGuides("archived");
+  const guide = guides.find((g) => g.id === guideId);
+
+  const guideHTML = document.querySelector(`[data-id="${guideId}"]`);
+  const msLs = guideHTML.querySelector(".milestone-list");
+
+  msLs.innerHTML = "";
+
+  for (let ms of guide.milestones) {
+    const milestoneProgress = calcMilestoneProgress(ms);
+    if (ms.title === "") {
+      ms.title = "Unnamed Milestone";
+    }
+    const renderedMS = `
+<div class="milestone archived" data-id="${ms.id}">
+    <div class="milestone-header">
+        <span class="milestone-title-archived">${ms.title}</span>
+        <div class="milestone-actions">
+            <div class="progress-wrap">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${milestoneProgress}%"></div>
+                </div>
+                <span class="progress-pct">${milestoneProgress}%</span>
+            </div>
+        </div>
+    </div>
+</div>`;
+    msLs.insertAdjacentHTML("beforeend", renderedMS);
+  }
+
+  if (expanded) {
+    msLs.style.display = "block";
+    guideHTML.querySelector(".guide-expand-btn").classList.add("expanded");
+  }
+}
+
+async function createGuideTask(guideId, msId) {
+  await fetch(`/api/userdata/guides/${guideId}/milestones/${msId}/tasks`, { method: "POST" });
+  guidesLoaded = false;
+  await renderGuideTasks(guideId, msId, true);
+}
+
+async function renderGuideTasks(guideId, milestoneId, expanded) {
   const guides = await getGuides("active");
   const guide = guides.find((g) => g.id === guideId);
 
@@ -328,6 +411,10 @@ async function renderGuideTasks(guideId, milestoneId) {
     Add Task
 </md-text-button>`,
   );
+  if (expanded) {
+    taskLs.style.display = "block";
+    msHTML.querySelector(".milestone-expand-btn").classList.add("expanded");
+  }
 }
 
 async function createNewGuide() {
@@ -527,11 +614,11 @@ function initGuideListeners() {
     const card = guideExpandBtn.closest(".guide-card");
     const milestoneList = card.querySelector(".milestone-list");
 
+    const isOpening = milestoneList.style.display === "none";
+    milestoneList.style.display = isOpening ? "block" : "none";
     guideExpandBtn.classList.toggle("expanded");
-    milestoneList.style.display = milestoneList.style.display === "none" ? "block" : "none";
-    renderMilestones(card.dataset.id);
+    if (isOpening) renderMilestones(card.dataset.id);
   });
-
   // milestone expand
   document.querySelector("#guideList").addEventListener("click", (event) => {
     const msExpandBtn = event.target.closest(".milestone-expand-btn");
@@ -541,9 +628,10 @@ function initGuideListeners() {
     const milestone = msExpandBtn.closest(".milestone");
     const taskList = milestone.querySelector(".guide-task-list");
 
-    msExpandBtn.classList.toggle("expanded");
-    taskList.style.display = taskList.style.display === "none" ? "block" : "none";
-    renderGuideTasks(card.dataset.id, milestone.dataset.id);
+    const isOpening = taskList.style.display === "none";
+    taskList.style.display = isOpening ? "block" : "none";
+    event.target.classList.toggle("expanded");
+    if (isOpening) renderGuideTasks(card.dataset.id, milestone.dataset.id);
   });
 
   // milestone add
@@ -554,6 +642,26 @@ function initGuideListeners() {
     const guideId = msCreateBtn.closest(".guide-card").dataset.id;
 
     createMs(guideId);
+  });
+
+  // milestone autosave
+  document.querySelector("#guideList").addEventListener("focusout", (event) => {
+    if (!event.target.classList.contains("milestone-title")) return;
+
+    const guideId = event.target.closest(".guide-card").dataset.id;
+
+    const ms = event.target.closest(".milestone");
+    const msId = ms.dataset.id;
+
+    fetch(`/api/userdata/guides/${guideId}/milestones/${msId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: event.target.value }),
+    });
+    setTimeout(() => {
+      guidesLoaded = false;
+      renderMilestones(guideId, true);
+    }, 700);
   });
 
   // milestone rm
@@ -621,6 +729,20 @@ document.querySelector("#guideList").addEventListener("click", (event) => {
   }, 300);
 });
 
+// show archived milestones
+document.querySelector("#guideList").addEventListener("click", (event) => {
+  const guideExpandBtn = event.target.closest(".archived-guide-expand-btn");
+  if (!guideExpandBtn) return;
+
+  const card = guideExpandBtn.closest(".guide-card");
+  const milestoneList = card.querySelector(".milestone-list");
+
+  const isOpening = milestoneList.style.display === "none";
+  milestoneList.style.display = isOpening ? "block" : "none";
+  guideExpandBtn.classList.toggle("expanded");
+  if (isOpening) renderArchivedMilestones(card.dataset.id);
+});
+
 // unarchive
 document.querySelector("#guideList").addEventListener("click", (event) => {
   if (!event.target.classList.contains("unarchive-btn")) return;
@@ -636,6 +758,90 @@ document.querySelector("#guideList").addEventListener("click", (event) => {
     guidesLoaded = false;
     renderArchivedGuides();
   }, 300);
+});
+
+// create task
+document.querySelector("#guideList").addEventListener("click", async (event) => {
+  if (!event.target.classList.contains("add-task-btn")) return;
+  const guide = event.target.closest(".guide-card");
+  const ms = event.target.closest(".milestone");
+
+  await createGuideTask(guide.dataset.id, ms.dataset.id, true);
+  updateAllProgress();
+});
+
+// autosave task title
+document.querySelector("#guideList").addEventListener("focusout", (event) => {
+  if (!event.target.classList.contains("guide-task-title")) return;
+  const guideId = event.target.closest(".guide-card").dataset.id;
+  const msId = event.target.closest(".milestone").dataset.id;
+  const tskId = event.target.closest(".guide-task").dataset.id;
+
+  fetch(`/api/userdata/guides/${guideId}/milestones/${msId}/tasks/${tskId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: event.target.value }),
+  });
+  setTimeout(() => {
+    guidesLoaded = false;
+    renderGuideTasks(guideId, msId, true);
+  }, 500);
+});
+
+// autosave task done
+document.querySelector("#guideList").addEventListener("change", async (event) => {
+  if (event.target.tagName !== "MD-CHECKBOX") return;
+  const guideId = event.target.closest(".guide-card").dataset.id;
+  const msId = event.target.closest(".milestone").dataset.id;
+  const tskId = event.target.closest(".guide-task").dataset.id;
+
+  await fetch(`/api/userdata/guides/${guideId}/milestones/${msId}/tasks/${tskId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ done: event.target.checked }),
+  });
+
+  guidesLoaded = false;
+  await getGuides("active"); // refresh cache
+  updateAllProgress();
+
+  const taskTitle = event.target.closest(".guide-task").querySelector(".guide-task-title");
+  taskTitle.classList.toggle("done", event.target.checked);
+});
+
+// task rm
+document.querySelector("#guideList").addEventListener("click", (event) => {
+  const tskDelBtn = event.target.closest(".delete-task-btn");
+  if (!tskDelBtn) return;
+
+  const guideId = tskDelBtn.closest(".guide-card").dataset.id;
+  const msId = tskDelBtn.closest(".milestone").dataset.id;
+  const tskId = event.target.closest(".guide-task").dataset.id;
+  guideTaskToDel = tskId;
+  msToDel = msId;
+  guideToDel = guideId;
+  document.querySelector("#tsk-delete-confirm").show();
+});
+
+document.querySelector("#tsk-delete-cancel").addEventListener("click", () => {
+  document.querySelector("#tsk-delete-confirm").close();
+  msToDel = null;
+  guideToDel = null;
+  guideTaskToDel = null;
+});
+
+document.querySelector("#tsk-delete-confirm-btn").addEventListener("click", async () => {
+  if (!guideTaskToDel) return;
+  document.querySelector("#tsk-delete-confirm").close();
+
+  await fetch(`/api/userdata/guides/${guideToDel}/milestones/${msToDel}/tasks/${guideTaskToDel}`, { method: "DELETE" });
+
+  guidesLoaded = false;
+  await renderGuideTasks(guideToDel, msToDel, true);
+  updateAllProgress();
+  msToDel = null;
+  guideToDel = null;
+  guideTaskToDel = null;
 });
 
 // delete guide (archived)
