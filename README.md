@@ -17,6 +17,8 @@ Currently, the project is in a very early development stage, and most features I
 My instance of Clutter is up at [clutter.sirkorgo.com](https://clutter.sirkorgo.com) if you would like to try out Clutter.
 Just sign in using your Google Account and that's it!
 
+(small side note: since its in development, its not hooked up to a production server, its just reverse proxied to my macbook when im working on it, so it wont be up sometimes)
+
 ## Installation
 ### Dependencies
   - Docker (with Docker Compose)
