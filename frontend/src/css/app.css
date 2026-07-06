@@ -181,3 +181,50 @@ md-outlined-text-field {
 #link-menu {
   z-index: 1000;
 }
+
+.partial-input {
+  width: 30px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-family: "Google Sans";
+  border: none;
+  border-bottom: 1px solid var(--md-sys-color-outline);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  padding: 2px 0;
+  outline: none;
+}
+
+.partial-input:focus {
+  border-bottom-color: var(--md-sys-color-primary);
+}
+
+/* hide the number input spinner arrows */
+.partial-input::-webkit-inner-spin-button,
+.partial-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  appearance: textfield;
+}
+
+.taskPartial {
+  display: flex;
+  gap: 1px;
+  align-items: center;
+  justify-content: center;
+}
+
+.donethings {
+  display: flex;
+  gap: 1px;
+  justify-content: center;
+  align-items: center;
+}
+
+.partial-sep {
+  font-size: 0.85rem;
+  color: var(--md-sys-color-outline);
+}

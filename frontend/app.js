@@ -1,3 +1,4 @@
+/* holy trinity of globals */
 let guides = [];
 let guidesLoaded = false;
 let tabs;
@@ -9,6 +10,10 @@ let guideTaskToDel = null;
 let activeLinkGuideId = null;
 let activeLinkMsId = null;
 let activeLinkTaskId = null;
+let activeTypeGuideId = null;
+let activeTypeMsId = null;
+let activeTypeTaskId = null;
+let activeTypeContext = null;
 
 // settings api
 async function getSettings() {
@@ -17,14 +22,27 @@ async function getSettings() {
   return data;
 }
 
+// canvas integration
+async function getCanvasTasks() {
+  const res = await fetch("api/integrations/canvas/sync", { method: "POST" });
+  const taskJSON = await res.json();
+}
+
 // tasks api
+let tasks = [];
+let tasksLoaded = false;
+
 async function getTasks() {
-  const response = await fetch("/api/userdata/tasks", { method: "GET" });
-  const data = await response.json();
-  return data;
+  if (!tasksLoaded) {
+    const response = await fetch("/api/userdata/tasks", { method: "GET" });
+    tasks = await response.json();
+    tasksLoaded = true;
+  }
+  return tasks;
 }
 
 async function renderTasks() {
+  tasksLoaded = false;
   const taskData = await getTasks();
 
   taskData.sort((a, b) => {
@@ -60,23 +78,35 @@ async function renderTasks() {
       }
     }
 
-    const renderedTask = `<div class="card" data-id="${task.id}">
-                <md-checkbox ${task.done ? "checked" : ""}></md-checkbox>
-                <div class="task-info">
-                    <md-outlined-text-field data-field="title" value="${task.title}" label="Task"></md-outlined-text-field>
-                    <span style="display: flex; gap: 10px; align-items: center;">
-                        <span style="display: flex; align-items: center; gap: 4px;">
-                            <input class="task-due" data-field="due" type="date" value="${task.due}">
-                        </span>
-                        <span class="task-meta">
-                            <code class="code-block">${task.id}</code>
-                        </span>
-                    </span>
-                </div>
-                <md-icon-button class="delete-btn">
-                    <md-icon>delete</md-icon>
-                </md-icon-button>
-            </div>`;
+    const taskControl = task.partial
+      ? `<span class="taskPartial"><input class="partial-input" type="number" min="0" value="${task.partialCurrent}" placeholder="0">
+       <span class="partial-sep">/</span>
+       <input class="partial-input partial-total" type="number" min="0" value="${task.partialTotal}" placeholder="0"></span>`
+      : `<md-checkbox ${task.done ? "checked" : ""}></md-checkbox>`;
+
+    const renderedTask = `
+    <div class="card" data-id="${task.id}">
+    <span class="donethings">
+      ${taskControl}
+      <md-icon-button class="task-type-btn">
+        <md-icon id="task-type-arrow">arrow_drop_down</md-icon>
+      </md-icon-button>
+      </span>
+      <div class="task-info">
+        <md-outlined-text-field data-field="title" value="${task.title}" label="Task"></md-outlined-text-field>
+          <span style="display: flex; gap: 10px; align-items: center;">
+            <span style="display: flex; align-items: center; gap: 4px;">
+              <input class="task-due" data-field="due" type="date" value="${task.due}">
+            </span>
+            <span class="task-meta">
+              <code class="code-block">${task.id}</code>
+            </span>
+          </span>
+        </div>
+      <md-icon-button class="delete-btn">
+        <md-icon>delete</md-icon>
+      </md-icon-button>
+    </div>`;
     taskList.insertAdjacentHTML("beforeend", renderedTask);
   }
 }
@@ -136,8 +166,12 @@ function calcGuideProgress(guide) {
   let done = 0;
   for (let milestone of guide.milestones) {
     for (let task of milestone.tasks) {
+      if (task.partial) {
+        done += task.partialTotal > 0 ? task.partialCurrent / task.partialTotal : 0;
+      } else if (task.done) {
+        done++;
+      }
       total++;
-      if (task.done === true) done++;
     }
   }
   return total === 0 ? 0 : Math.round((done / total) * 100);
@@ -147,8 +181,12 @@ function calcMilestoneProgress(ms) {
   let total = 0;
   let done = 0;
   for (let task of ms.tasks) {
+    if (task.partial) {
+      done += task.partialTotal > 0 ? task.partialCurrent / task.partialTotal : 0;
+    } else if (task.done) {
+      done++;
+    }
     total++;
-    if (task.done === true) done++;
   }
   return total === 0 ? 0 : Math.round((done / total) * 100);
 }
@@ -360,7 +398,11 @@ async function renderArchivedMilestones(guideId, expanded) {
 }
 
 async function createGuideTask(guideId, msId) {
-  await fetch(`/api/userdata/guides/${guideId}/milestones/${msId}/tasks`, { method: "POST" });
+  await fetch(`/api/userdata/guides/${guideId}/milestones/${msId}/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
   guidesLoaded = false;
   await renderGuideTasks(guideId, msId, true);
 }
@@ -376,10 +418,18 @@ async function renderGuideTasks(guideId, milestoneId, expanded) {
   taskLs.innerHTML = "";
 
   for (let task of ms.tasks) {
+    const taskControl = task.partial
+      ? `<span class="taskPartial"><input class="partial-input" type="number" min="0" value="${task.partialCurrent}" placeholder="0">
+       <span class="partial-sep">/</span>
+       <input class="partial-input partial-total" type="number" min="0" value="${task.partialTotal}" placeholder="0"></span>`
+      : `<md-checkbox ${task.done ? "checked" : ""}></md-checkbox>`;
     const renderedTask = `
 <div class="guide-task" data-id="${task.id}">
-    <md-icon class="task-drag-handle">drag_indicator</md-icon>
-    <md-checkbox ${task.done ? "checked" : ""}></md-checkbox>
+<md-icon class="task-drag-handle">drag_indicator</md-icon>
+    ${taskControl}
+      <md-icon-button class="task-type-btn">
+      <md-icon class="task-type-arrow">arrow_drop_down</md-icon>
+    </md-icon-button>
     <input class="guide-task-title ${task.done ? "done" : ""}" type="text" value="${task.title}" placeholder="Unnamed Task">
     <div class="guide-task-actions">
         <md-icon-button class="task-link-btn">
@@ -532,6 +582,27 @@ function initSettingsListeners() {
 }
 
 function initTaskListeners() {
+  document.querySelector("#taskList").addEventListener("focusout", (event) => {
+    if (!event.target.classList.contains("partial-input")) return;
+
+    const card = event.target.closest(".card");
+    const tskId = card.dataset.id;
+
+    let current = parseInt(card.querySelector(".partial-input:not(.partial-total)").value) || 0;
+    let total = parseInt(card.querySelector(".partial-total").value) || 0;
+
+    if (current > total && total > 0) {
+      current = total;
+      card.querySelector(".partial-input:not(.partial-total)").value = total;
+    }
+
+    fetch(`/api/userdata/tasks/${tskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partialCurrent: current, partialTotal: total }),
+    });
+  });
+
   document.querySelector("#new-task-btn").addEventListener("click", () => {
     createNewTask();
   });
@@ -815,6 +886,147 @@ document.querySelector("#guideList").addEventListener("change", async (event) =>
   taskTitle.classList.toggle("done", event.target.checked);
 });
 
+// task type
+document.querySelector("#guideList").addEventListener("click", async (event) => {
+  const dropdown = event.target.closest(".task-type-btn");
+  if (!dropdown) return;
+  activeTypeContext = "guide";
+
+  const guideId = event.target.closest(".guide-card").dataset.id;
+  const msId = event.target.closest(".milestone").dataset.id;
+  const tskId = event.target.closest(".guide-task").dataset.id;
+
+  const guide = guides.find((g) => g.id === guideId);
+  const ms = guide.milestones.find((m) => m.id === msId);
+  const task = ms.tasks.find((t) => t.id === tskId);
+
+  if (!task.partial) {
+    document.querySelector("#task-partial-check").textContent = "";
+    document.querySelector("#task-single-check").textContent = "check";
+  } else if (task.partial) {
+    document.querySelector("#task-single-check").textContent = "";
+    document.querySelector("#task-partial-check").textContent = "check";
+  }
+
+  dropdown.id = "active-link-anchor";
+  const menu = document.querySelector("#task-type-menu");
+  menu.anchorElement = dropdown;
+  menu.open = !menu.open;
+
+  activeTypeGuideId = guideId;
+  activeTypeMsId = msId;
+  activeTypeTaskId = tskId;
+});
+
+document.querySelector("#taskList").addEventListener("click", async (event) => {
+  const dropdown = event.target.closest(".task-type-btn");
+  if (!dropdown) return;
+  activeTypeContext = "task";
+
+  const tskId = event.target.closest(".card").dataset.id;
+  const task = tasks.find((t) => t.id === tskId);
+
+  if (!task.partial) {
+    document.querySelector("#task-partial-check").textContent = "";
+    document.querySelector("#task-single-check").textContent = "check";
+  } else if (task.partial) {
+    document.querySelector("#task-single-check").textContent = "";
+    document.querySelector("#task-partial-check").textContent = "check";
+  }
+
+  dropdown.id = "active-link-anchor";
+  const menu = document.querySelector("#task-type-menu");
+  menu.anchorElement = dropdown;
+  menu.open = !menu.open;
+
+  activeTypeTaskId = tskId;
+});
+
+// task type set
+document.querySelector("#task-type-menu").addEventListener("click", async (event) => {
+  const item = event.target.closest("md-menu-item");
+  if (!item) return;
+
+  if (activeTypeContext === "task") {
+    if (item.id === "task-single") {
+      await fetch(`/api/userdata/tasks/${activeTypeTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partial: false, done: false }),
+      });
+      tasksLoaded = false;
+      await renderTasks();
+    }
+    if (item.id === "task-partial") {
+      await fetch(`/api/userdata/tasks/${activeTypeTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partial: true, partialCurrent: 0, partialTotal: 0, done: false }),
+      });
+      tasksLoaded = false;
+      await renderTasks();
+    }
+    activeTypeTaskId = null;
+    activeTypeContext = null;
+  } else if (activeTypeContext === "guide") {
+    const guide = guides.find((g) => g.id === activeTypeGuideId);
+    const ms = guide.milestones.find((m) => m.id === activeTypeMsId);
+    const task = ms.tasks.find((t) => t.id === activeTypeTaskId);
+    if (item.id === "task-single") {
+      await fetch(`/api/userdata/guides/${activeTypeGuideId}/milestones/${activeTypeMsId}/tasks/${activeTypeTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          partial: false,
+          done: false,
+        }),
+      });
+      guidesLoaded = false;
+      activeTypeContext = null;
+      await renderGuideTasks(activeTypeGuideId, activeTypeMsId, true);
+    }
+    if (item.id === "task-partial") {
+      await fetch(`/api/userdata/guides/${activeTypeGuideId}/milestones/${activeTypeMsId}/tasks/${activeTypeTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partial: true, partialCurrent: 0, partialTotal: 0, done: false }),
+      });
+      guidesLoaded = false;
+      activeTypeContext = null;
+      await renderGuideTasks(activeTypeGuideId, activeTypeMsId, true);
+    }
+
+    activeTypeGuideId = null;
+    activeTypeMsId = null;
+    activeTypeTaskId = null;
+  }
+});
+document.querySelector("#guideList").addEventListener("focusout", (event) => {
+  if (!event.target.classList.contains("partial-input")) return;
+
+  const guideId = event.target.closest(".guide-card").dataset.id;
+  const msId = event.target.closest(".milestone").dataset.id;
+  const tskId = event.target.closest(".guide-task").dataset.id;
+
+  const task = event.target.closest(".guide-task");
+  let current = parseInt(task.querySelector(".partial-input:not(.partial-total)").value) || 0;
+  let total = parseInt(task.querySelector(".partial-total").value) || 0;
+
+  if (current > total && total > 0) {
+    current = total;
+    task.querySelector(".partial-input:not(.partial-total)").value = total;
+  }
+
+  fetch(`/api/userdata/guides/${guideId}/milestones/${msId}/tasks/${tskId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ partialCurrent: current, partialTotal: total }),
+  }).then(async () => {
+    guidesLoaded = false;
+    await getGuides("active");
+    updateAllProgress();
+  });
+});
 // task link
 document.querySelector("#guideList").addEventListener("click", async (event) => {
   const linkBtn = event.target.closest(".task-link-btn");

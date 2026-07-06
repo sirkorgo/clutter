@@ -195,6 +195,16 @@
           <div slot="headline">Remove Link</div>
         </md-menu-item>
       </md-menu>
+      <md-menu positioning="popover" id="task-type-menu">
+        <md-menu-item id="task-single">
+          <md-icon id="task-single-check" slot="start"></md-icon>
+          <div slot="headline">Single Task</div>
+        </md-menu-item>
+        <md-menu-item id="task-partial">
+          <md-icon id="task-partial-check" slot="start"></md-icon>
+          <div slot="headline">Partial Task</div>
+        </md-menu-item>
+      </md-menu>
     </div>
     <md-dialog id="delete-confirm">
       <div slot="headline">Delete Task?</div>

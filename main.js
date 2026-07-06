@@ -21,6 +21,11 @@ function genId() {
 }
 
 function requireAuth(req, res, next) {
+  if (process.env.NODE_ENV === "development") {
+    req.userEmail = process.env.DEV_USER_EMAIL || "jake@example.com";
+    return next();
+  }
+
   const userEmail = req.headers["x-forwarded-email"];
   if (!userEmail) return res.status(401).json({ error: "Unauthorized" });
   req.userEmail = userEmail;
@@ -64,6 +69,9 @@ async function initUser(userEmail) {
   const userFolder = path.join(__dirname, "userdata", userId);
   await fs.mkdir(userFolder, { recursive: true });
 
+  const integrationsFolder = path.join(userFolder, "integrations");
+  await fs.mkdir(integrationsFolder, { recursive: true });
+  await fs.writeFile(path.join(integrationsFolder, "canvas.json"), JSON.stringify({}, null, 2), "utf8");
   await fs.writeFile(path.join(userFolder, "tasks.json"), JSON.stringify([], null, 2), "utf8");
   await fs.writeFile(path.join(userFolder, "guides.json"), JSON.stringify([], null, 2), "utf8");
   await fs.writeFile(
@@ -172,6 +180,9 @@ app.post("/api/userdata/tasks", async (req, res) => {
     title: req.body.title || "",
     done: req.body.done || false,
     due: req.body.due || null,
+    partial: false,
+    partialCurrent: 0,
+    partialTotal: 0,
   };
 
   tasks.push(newTask);
@@ -380,10 +391,12 @@ app.post("/api/userdata/guides/:gid/milestones/:msid/tasks", async (req, res) =>
 
   const newTask = {
     id: genId(),
-    title: "",
-    done: false,
-    link: "",
-    completedAt: null,
+    title: req.body.title || "",
+    done: req.body.done || false,
+    due: req.body.due || null,
+    partial: false,
+    partialCurrent: 0,
+    partialTotal: 0,
   };
 
   guides[guideIndex].milestones[msIndex].tasks.push(newTask);
