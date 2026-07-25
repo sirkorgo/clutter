@@ -1,4 +1,5 @@
 @import url(/src/css/components/guides.css);
+@import url(/src/css/components/sum.css);
 
 /* 
    HEADER
@@ -110,7 +111,7 @@ md-tabs {
     0 1px 3px 1px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   transition: box-shadow 0.2s ease;
 }
 
@@ -157,7 +158,9 @@ md-fab {
 md-outlined-text-field {
   --md-outlined-text-field-outline-color: transparent;
   --md-outlined-text-field-hover-outline-color: var(--md-sys-color-outline);
-  --md-outlined-text-field-container-color: transparent;
+  --md-outlined-text-field-container-shape: 8px;
+  --md-outlined-field-top-space: 8px;
+  --md-outlined-field-bottom-space: 8px;
 }
 
 /* 
@@ -183,7 +186,7 @@ md-outlined-text-field {
 }
 
 .partial-input {
-  width: 30px;
+  width: 15px;
   text-align: center;
   font-size: 0.85rem;
   font-family: "Google Sans";
@@ -227,4 +230,43 @@ input[type="number"] {
 .partial-sep {
   font-size: 0.85rem;
   color: var(--md-sys-color-outline);
+}
+
+.canvas-course-name {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-outline);
+  display: block;
+}
+
+.canvas-task-name {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.task-type-btn {
+  --md-icon-button-state-layer-size: 28px;
+  --md-icon-button-icon-size: 16px;
+  width: 28px;
+  height: 28px;
+}
+
+.task-title {
+  flex: 1;
+  font-weight: 500;
+  font-size: 1rem;
+  background: none;
+  border: none;
+  font-family: "Google Sans";
+  color: var(--md-sys-color-on-surface);
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.task-title:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.task-title:focus {
+  outline: none;
+  background-color: var(--md-sys-color-surface-container-high);
 }

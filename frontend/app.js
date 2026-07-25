@@ -22,10 +22,121 @@ async function getSettings() {
   return data;
 }
 
+// sum page api
+async function getWeekData(canvasTasks = []) {
+  const now = new Date();
+  const days = [];
+
+  for (let i = -7; i <= 7; i++) {
+    const day = new Date(now);
+    day.setHours(0, 0, 0, 0);
+    day.setDate(now.getDate() + i);
+    days.push({ date: day, tasks: [], guideTasks: [] });
+  }
+
+  const allTasks = [...(await getTasks()), ...canvasTasks];
+  for (let task of allTasks) {
+    if (!task.due) continue;
+    const [year, month, day] = task.due.split("-").map(Number);
+    const due = new Date(year, month - 1, day);
+    due.setHours(0, 0, 0, 0);
+    const entry = days.find((d) => d.date.getTime() === due.getTime());
+    if (!entry) continue;
+    entry.tasks.push({ id: task.id, title: task.title, done: task.done, type: "task" });
+  }
+
+  await getGuides("active");
+  for (let guide of guides) {
+    for (let ms of guide.milestones) {
+      for (let task of ms.tasks) {
+        if (!task.done || !task.completedAt) continue;
+        const completed = new Date(task.completedAt);
+        completed.setHours(0, 0, 0, 0);
+        const entry = days.find((d) => d.date.getTime() === completed.getTime());
+        if (!entry) continue;
+        entry.guideTasks.push({ id: task.id, title: task.title, guideTitle: guide.title, type: "guide" });
+      }
+    }
+  }
+
+  return days;
+}
+
+function truncate(str, max = 35) {
+  if (!str) return "Untitled";
+  return str.length > max ? str.slice(0, max) + "…" : str;
+}
+
+async function renderActivityGrid() {
+  const container = document.querySelector("#activityGrid");
+  const weekData = await getWeekData();
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let html = `<div id="activityRows">`;
+
+  for (let day of weekData) {
+    const isToday = day.date.getTime() === today.getTime();
+    const allEntries = [...day.tasks, ...day.guideTasks];
+    const visible = allEntries.slice(0, 4);
+    const overflow = allEntries.slice(4);
+
+    let cellsHtml = "";
+
+    for (let entry of visible) {
+      let colorClass = "";
+      if (entry.type === "guide") colorClass = "blue";
+      else if (entry.done) colorClass = "green";
+      else colorClass = "grey";
+
+      cellsHtml += `<div class="task-cell ${colorClass}" data-title="${entry.title}"></div>`;
+    }
+
+    if (overflow.length > 0) {
+      const anyIncomplete = overflow.some((e) => e.type === "task" && !e.done);
+      const overflowColor = anyIncomplete ? "grey" : "green";
+      const tooltipItems = overflow
+        .map((e) => {
+          const border = e.type === "guide" ? "blue" : e.done ? "green" : "grey";
+          return `<div class="tooltip-item" style="border-left: 3px solid ${border}; padding-left: 6px;">
+  ${e.title || "Untitled"}
+  ${e.type === "guide" ? `<br><small>${truncate(e.guideTitle)}</small>` : ""}
+</div>`;
+        })
+        .join("");
+
+      cellsHtml += `
+        <div class="task-cell overflow ${overflowColor}" data-overflow="true">
+          <span>+${overflow.length}</span>
+          <div class="overflow-tooltip">${tooltipItems}</div>
+        </div>`;
+    }
+
+    html += `
+      <div class="day-column ${isToday ? "today" : ""}">
+        <div class="task-cells">${cellsHtml}</div>
+        <div class="day-label">
+          <span>${dayNames[day.date.getDay()]}</span>
+          <span>${day.date.getDate()}</span>
+        </div>
+      </div>`;
+  }
+
+  html += `</div>`;
+  container.innerHTML = html;
+
+  // overflow tooltip toggle
+  container.querySelectorAll(".task-cell.overflow").forEach((cell) => {
+    cell.addEventListener("mouseenter", () => cell.querySelector(".overflow-tooltip").classList.add("visible"));
+    cell.addEventListener("mouseleave", () => cell.querySelector(".overflow-tooltip").classList.remove("visible"));
+  });
+}
 // canvas integration
 async function getCanvasTasks() {
-  const res = await fetch("api/integrations/canvas/sync", { method: "POST" });
+  const res = await fetch("/api/integrations/canvas/sync", { method: "POST" });
   const taskJSON = await res.json();
+  return taskJSON.map((task) => ({ ...task, canvas: true, id: task.id.toString() }));
 }
 
 // tasks api
@@ -41,11 +152,14 @@ async function getTasks() {
   return tasks;
 }
 
-async function renderTasks() {
+async function renderTasks(includeCanvas = false) {
   tasksLoaded = false;
   const taskData = await getTasks();
+  const settings = await getSettings();
+  const canvasData = includeCanvas && settings.canvas.apiKey ? await getCanvasTasks() : [];
+  const allTasks = [...taskData, ...canvasData];
 
-  taskData.sort((a, b) => {
+  allTasks.sort((a, b) => {
     if (!a.due) return 1;
     if (!b.due) return -1;
     return new Date(a.due) - new Date(b.due);
@@ -63,7 +177,7 @@ async function renderTasks() {
   const anyFilterActive = filters.notdone || filters.done || filters.local || filters.canvas;
 
   taskList.innerHTML = "";
-  for (let task of taskData) {
+  for (let task of allTasks) {
     if (anyFilterActive) {
       const typeFilterActive = filters.canvas || filters.local;
       if (typeFilterActive) {
@@ -84,7 +198,23 @@ async function renderTasks() {
        <input class="partial-input partial-total" type="number" min="0" value="${task.partialTotal}" placeholder="0"></span>`
       : `<md-checkbox ${task.done ? "checked" : ""}></md-checkbox>`;
 
-    const renderedTask = `
+    const renderedTask = task.canvas
+      ? `
+        <div class="card canvas-task" data-id="${task.id}">
+            <md-checkbox ${task.done ? "checked" : ""}></md-checkbox>
+            <div class="task-info">
+                <span class="canvas-task-name">${task.name}</span>
+                <span class="canvas-course-name">${task.courseName}</span>
+                <span style="display: flex; gap: 10px; align-items: center;">
+                    <input readonly class="task-due" type="date" value="${task.due ? task.due.split("T")[0] : ""}">
+                    <code class="code-block">${task.id}</code>
+                </span>
+            </div>
+            <md-icon-button class="canvas-link-btn">
+                <md-icon>open_in_new</md-icon>
+            </md-icon-button>
+        </div>`
+      : `
     <div class="card" data-id="${task.id}">
     <span class="donethings">
       ${taskControl}
@@ -93,7 +223,7 @@ async function renderTasks() {
       </md-icon-button>
       </span>
       <div class="task-info">
-        <md-outlined-text-field data-field="title" value="${task.title}" label="Task"></md-outlined-text-field>
+        <input type="text" class="task-title" data-field="title" value="${task.title}" label="Task"></input>
           <span style="display: flex; gap: 10px; align-items: center;">
             <span style="display: flex; align-items: center; gap: 4px;">
               <input class="task-due" data-field="due" type="date" value="${task.due}">
@@ -496,6 +626,90 @@ function showPage() {
   runPageScripts(hash);
 }
 
+async function renderGreeters() {
+  const header = document.querySelector("#sumpage-header");
+  const greeting = header.querySelector("#sumpage-greet");
+  const date = header.querySelector("#sumpage-date");
+
+  const settings = await getSettings();
+
+  const midnight = [
+    `Late night grind, ${settings.nickname}?`,
+    `You're up late, ${settings.nickname}.`,
+    `Good evening, night owl.`,
+    `Good evening, ${settings.nickname}.`,
+    `Burning the midnight oil, ${settings.nickname}?`,
+    `Still at it, ${settings.nickname}?`,
+    `It's not like I wanted to greet you or anything, ${settings.nickname}!`,
+    `Stay determined, ${settings.nickname}.`,
+  ];
+
+  const morning = [
+    `Breakfast and productivity, ${settings.nickname}?`,
+    `Good morning, ${settings.nickname}.`,
+    `Early bird gets the work done, ${settings.nickname}!`,
+    `Rise and grind, ${settings.nickname}!`,
+    `It's not like I wanted to greet you or anything, ${settings.nickname}!`,
+    `Stay determined, ${settings.nickname}.`,
+  ];
+
+  const noon = [
+    `Good afternoon, ${settings.nickname}.`,
+    `Afternoon grind, ${settings.nickname}?`,
+    `Keep it up, ${settings.nickname}!`,
+    `Lovely day, isn't it, ${settings.nickname}?`,
+    `Going strong, ${settings.nickname}.`,
+    `You're gonna be a [BIG SHOT], ${settings.nickname}`,
+    `Jarona, ${settings.nickname}!`,
+    `Hey there, ${settings.nickname}.`,
+    `It's not like I wanted to greet you or anything, ${settings.nickname}!`,
+    `Stay determined, ${settings.nickname}.`,
+  ];
+
+  const evening = [
+    `Good evening, ${settings.nickname}.`,
+    `Winding down, ${settings.nickname}.`,
+    `Ready for bed, ${settings.nickname}.`,
+    `Still grinding, ${settings.nickname}?`,
+    `Getting closer to your hopes and dreams, ${settings.nickname}?`,
+    `It's not like I wanted to greet you or anything, ${settings.nickname}!`,
+  ];
+
+  // day greeter
+  const hour = new Date().getHours();
+
+  let pool;
+  if (hour >= 0 && hour <= 5) pool = midnight;
+  else if (hour >= 6 && hour <= 11) pool = morning;
+  else if (hour >= 12 && hour <= 18) pool = noon;
+  else pool = evening;
+
+  const greeting_msg = pool[Math.floor(Math.random() * pool.length)];
+  greeting.innerHTML = greeting_msg;
+
+  // task counter
+  const target = new Date();
+  target.setHours(0, 0, 0, 0);
+  const dueThatDay = tasks.filter((task) => {
+    if (!task.due) return false;
+    const [year, month, day] = task.due.split("-").map(Number);
+    const due = new Date(year, month - 1, day);
+    return due.getTime() === target.getTime();
+  });
+
+  const options = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  };
+
+  const formattedDate = target.toLocaleDateString("en-US", options);
+  const incomplete = dueThatDay.filter((t) => !t.done).length;
+  const taskMsg =
+    incomplete === 0 ? "All tasks done!" : `You have ${incomplete} task${incomplete === 1 ? "" : "s"} left.`;
+  date.innerHTML = formattedDate + " — " + taskMsg;
+}
+
 async function runPageScripts(hash) {
   if (hash === "tasks") {
     const settings = await getSettings();
@@ -507,6 +721,10 @@ async function runPageScripts(hash) {
     document.querySelector('[label="Clutter"]').selected = filters.clutter;
 
     await renderTasks();
+
+    if (settings.canvas.apiKey) {
+      await renderTasks(true);
+    }
   }
 
   if (hash === "guides") {
@@ -514,6 +732,18 @@ async function runPageScripts(hash) {
     await renderActiveGuides();
     document.querySelector("#active-guide-btn").selected = true;
     document.querySelector("#archived-guide-btn").selected = false;
+  }
+
+  if (hash === "summary") {
+    await renderActivityGrid();
+    const settings = await getSettings();
+
+    renderGreeters();
+
+    if (settings.canvas.apiKey) {
+      const canvasTasks = await getCanvasTasks();
+      await renderActivityGrid(canvasTasks);
+    }
   }
 }
 
@@ -595,11 +825,17 @@ function initTaskListeners() {
       current = total;
       card.querySelector(".partial-input:not(.partial-total)").value = total;
     }
-
     fetch(`/api/userdata/tasks/${tskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ partialCurrent: current, partialTotal: total }),
+      body: JSON.stringify({
+        partialCurrent: current,
+        partialTotal: total,
+        done: current >= total && total > 0,
+      }),
+    }).then(() => {
+      tasksLoaded = false;
+      renderTasks();
     });
   });
 
@@ -615,7 +851,7 @@ function initTaskListeners() {
   document.querySelector("#taskList").addEventListener("focusout", (event) => {
     if (!event.target.dataset.field) return;
     const card = event.target.closest(".card");
-    if (!card) return;
+    if (!card || card.classList.contains("canvas-task")) return;
 
     const taskId = card.dataset.id;
     const field = event.target.dataset.field;
@@ -631,9 +867,23 @@ function initTaskListeners() {
   document.querySelector("#taskList").addEventListener("change", (event) => {
     if (event.target.tagName !== "MD-CHECKBOX") return;
     const card = event.target.closest(".card");
+    if (!card || card.classList.contains("canvas-task")) return;
     const taskId = card.dataset.id;
 
     fetch("/api/userdata/tasks/" + taskId, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ done: event.target.checked }),
+    }).then(() => setTimeout(() => renderTasks(), 500));
+  });
+
+  document.querySelector("#taskList").addEventListener("change", (event) => {
+    if (event.target.tagName !== "MD-CHECKBOX") return;
+    const card = event.target.closest(".card");
+    if (!card.classList.contains("canvas-task")) return;
+    const taskId = card.dataset.id;
+
+    fetch("/api/integrations/canvas/done/" + taskId, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ done: event.target.checked }),
@@ -1020,11 +1270,17 @@ document.querySelector("#guideList").addEventListener("focusout", (event) => {
   fetch(`/api/userdata/guides/${guideId}/milestones/${msId}/tasks/${tskId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ partialCurrent: current, partialTotal: total }),
+    body: JSON.stringify({
+      partialCurrent: current,
+      partialTotal: total,
+      done: current >= total && total > 0,
+      completedAt: current >= total && total > 0 ? new Date().toISOString() : null,
+    }),
   }).then(async () => {
     guidesLoaded = false;
     await getGuides("active");
     updateAllProgress();
+    renderGuideTasks(guideId, msId, true);
   });
 });
 // task link

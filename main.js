@@ -477,6 +477,8 @@ app.post("/api/integrations/canvas/sync", requireAuth, async (req, res) => {
   const courseList = await courseData.json();
 
   const allTasks = [];
+  const savedTasksPath = path.join(__dirname, "userdata", userId, "integrations", "canvas.json");
+  const savedTasks = JSON.parse(await fs.readFile(savedTasksPath, "utf-8"));
 
   for (let course of courseList) {
     if (!course.id) continue;
@@ -491,11 +493,14 @@ app.post("/api/integrations/canvas/sync", requireAuth, async (req, res) => {
 
     if (Array.isArray(assignments)) {
       for (let assignment of assignments) {
+        const taskDoneOverride = savedTasks[assignment.id.toString()];
+        const doneStatus = taskDoneOverride !== undefined ? taskDoneOverride : assignment.has_submitted_submissions;
+
         allTasks.push({
           name: assignment.name,
           id: assignment.id,
           due: assignment.due_at,
-          done: assignment.has_submitted_submissions,
+          done: doneStatus,
           link: assignment.html_url,
           courseName: course.name,
         });
@@ -504,6 +509,18 @@ app.post("/api/integrations/canvas/sync", requireAuth, async (req, res) => {
   }
 
   return res.json(allTasks);
+});
+
+app.patch(`/api/integrations/canvas/done/:cid`, requireAuth, async (req, res) => {
+  const userId = await getUser(req.userEmail);
+  const canvasPath = path.join(__dirname, "userdata", userId, "integrations", "canvas.json");
+  const canvas = JSON.parse(await fs.readFile(canvasPath, "utf8"));
+  const cid = req.params.cid;
+
+  const { done } = req.body;
+  canvas[cid] = done;
+  await fs.writeFile(canvasPath, JSON.stringify(canvas, null, 2), "utf8");
+  res.json({ status: "ok" });
 });
 
 // START

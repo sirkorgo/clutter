@@ -1,0 +1,104 @@
+#activityRows {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  width: fit-content;
+  justify-content: center;
+}
+
+#activityGrid {
+  justify-content: center;
+  display: flex;
+}
+
+#activity {
+  background-color: #f5f5f5;
+  border-radius: 10px;
+  border: 1px solid rgb(199, 199, 199);
+  padding: 20px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.day-column.today .day-label {
+  font-weight: bold;
+  color: var(--md-sys-color-primary);
+}
+
+.task-cells {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+  min-height: 120px;
+  justify-content: flex-start;
+  align-items: center;
+  height: 150px;
+}
+
+.task-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: white;
+}
+
+.task-cell.grey {
+  background-color: #c0c0c0;
+}
+.task-cell.green {
+  background-color: #4caf50;
+}
+.task-cell.blue {
+  background-color: #2196f3;
+}
+
+.day-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+  gap: 2px;
+}
+
+.overflow-tooltip {
+  display: none;
+  position: absolute;
+  bottom: unset;
+  top: 50%;
+  left: 36px;
+  transform: translateY(-50%);
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 160px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overflow-tooltip.visible {
+  display: flex;
+}
+
+.tooltip-item {
+  padding: 4px 6px;
+  color: black;
+}
