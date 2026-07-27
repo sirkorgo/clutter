@@ -239,6 +239,10 @@ async function renderTasks(includeCanvas = false) {
     </div>`;
     taskList.insertAdjacentHTML("beforeend", renderedTask);
   }
+
+  if (taskList.innerHTML === "") {
+    taskList.innerHTML = `<div style="width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;"><h2 style="margin-bottom: 3px;">No tasks found!</h2><p style="margin: 0;">Create a new one?</p></div>`;
+  }
 }
 
 async function createNewTask() {
