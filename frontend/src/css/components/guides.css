@@ -94,7 +94,7 @@
   width: 80px;
   height: 6px;
   background-color: var(--md-sys-color-surface-container-highest);
-  border: 0.5px solid rgb(222, 222, 222);
+  border: 0.5px solid var(--md-sys-color-outline);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -108,7 +108,8 @@
 
 .progress-pct {
   font-size: 0.75rem;
-  color: var(--md-sys-color-outline);
+  color: var(--md-sys-color-on-surface);
+  opacity: 0.6;
   min-width: 28px;
   text-align: right;
 }
@@ -120,7 +121,7 @@
   margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
   padding-left: 24px;
 }
 
@@ -128,6 +129,7 @@
   background-color: var(--md-sys-color-surface-container-high);
   border-radius: 10px;
   padding: 10px 12px;
+  margin-bottom: 5px;
 }
 
 .milestone-header {
@@ -264,4 +266,12 @@
   .guide-task-list {
     padding-left: 8px;
   }
+}
+
+.add-milestone-btn,
+.add-task-btn {
+  --md-text-button-hover-label-text-color: var(--md-sys-color-primary);
+  --md-text-button-hover-icon-color: var(--md-sys-color-primary);
+  --md-text-button-pressed-label-text-color: var(--md-sys-color-primary);
+  --md-text-button-pressed-icon-color: var(--md-sys-color-primary);
 }

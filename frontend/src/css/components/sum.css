@@ -102,3 +102,22 @@
   padding: 4px 6px;
   color: black;
 }
+
+html.dark #activity {
+  background-color: #1e2030;
+  border-color: #44475a;
+}
+
+html.dark .overflow-tooltip {
+  background: #252837;
+  border-color: #44475a;
+  color: #e2e4f8;
+}
+
+html.dark .tooltip-item {
+  color: #e2e4f8;
+}
+
+html.dark .task-cell.grey {
+  background-color: #44475a;
+}

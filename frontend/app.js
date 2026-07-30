@@ -739,11 +739,11 @@ async function runPageScripts(hash) {
   }
 
   if (hash === "summary") {
+    await getTasks(); // preload so renderGreeters has data
     await renderActivityGrid();
-    const settings = await getSettings();
-
     renderGreeters();
 
+    const settings = await getSettings();
     if (settings.canvas.apiKey) {
       const canvasTasks = await getCanvasTasks();
       await renderActivityGrid(canvasTasks);
@@ -797,10 +797,13 @@ function initSettingsListeners() {
   document.querySelector("#settings-modal").addEventListener("change", (event) => {
     if (event.target.tagName !== "MD-SWITCH") return;
 
+    const isDark = event.target.selected;
+    document.documentElement.className = isDark ? "dark" : "light";
+
     fetch("/api/userdata/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme: event.target.selected ? "dark" : "light" }),
+      body: JSON.stringify({ theme: isDark ? "dark" : "light" }),
     });
   });
 
@@ -1478,13 +1481,17 @@ function initAccountListeners() {
 }
 
 // load
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   tabs = document.querySelector("md-tabs");
   tabs.addEventListener("change", () => {
     const pgNames = ["summary", "tasks", "guides"];
     const name = pgNames[tabs.activeTabIndex];
     if (window.location.hash !== `#${name}`) window.location.hash = name;
   });
+
+  // apply theme on load
+  const settings = await getSettings();
+  document.documentElement.className = settings.theme === "dark" ? "dark" : "light";
 
   initAccountListeners();
   initSettingsListeners();

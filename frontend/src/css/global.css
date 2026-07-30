@@ -1,50 +1,107 @@
+@import "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=settings";
+@import url(/src/css/components/guides.css);
+@import url(/src/css/components/sum.css);
 
 html.light {
+  color-scheme: light;
   --secondary-font-color: rgb(59, 59, 59);
+  --md-sys-color-background: #ffffff;
+  --md-sys-color-surface: #f8f9ff;
+  --md-sys-color-surface-container: #ffffff;
+  --md-sys-color-surface-container-high: #e8eaf6;
+  --md-sys-color-surface-container-highest: #dde1f9;
+  --md-sys-color-on-surface: #1a1c2e;
+  --md-sys-color-outline: #c0c4d6;
+  --md-sys-color-on-surface-variant: #44475a;
+  --md-icon-button-icon-color: #1a1c2e;
+  --md-dialog-container-color: #ffffff;
+  --md-dialog-headline-color: #1a1c2e;
+  --md-dialog-supporting-text-color: #44475a;
+  --md-outlined-text-field-input-text-color: #1a1c2e;
+  --md-outlined-text-field-label-text-color: #44475a;
+  --md-filter-chip-label-text-color: #1a1c2e;
+  --md-filter-chip-outline-color: #c0c4d6;
+}
+
+html.dark {
+  color-scheme: dark;
+  --secondary-font-color: rgb(180, 180, 180);
+  --md-sys-color-background: #111318;
+  --md-sys-color-surface: #1a1c2e;
+  --md-sys-color-surface-container: #1e2030;
+  --md-sys-color-surface-container-high: #252837;
+  --md-sys-color-surface-container-highest: #2d3045;
+  --md-sys-color-on-surface: #e2e4f8;
+  --md-sys-color-outline: #44475a;
+  --md-sys-color-on-surface-variant: #c4c7db;
+  --md-sys-color-on-background: #e2e4f8;
+
+  /* icon buttons */
+  --md-icon-button-icon-color: #e2e4f8;
+
+  /* dialogs */
+  --md-dialog-container-color: #1e2030;
+  --md-dialog-headline-color: #e2e4f8;
+  --md-dialog-supporting-text-color: #c4c7db;
+
+  /* outlined text fields */
+  --md-outlined-text-field-input-text-color: #e2e4f8;
+  --md-outlined-text-field-label-text-color: #c4c7db;
+  --md-outlined-text-field-outline-color: #44475a;
+
+  /* switches */
+  --md-switch-track-color: #44475a;
+
+  /* filter chips */
+  --md-filter-chip-label-text-color: #e2e4f8;
+  --md-filter-chip-outline-color: #44475a;
 }
 
 :root {
   --md-sys-color-primary: #2d65ff;
   --md-sys-color-secondary: rgb(203, 223, 255);
-  --md-ref-typeface-brand: 'Open Sans';
+  --md-ref-typeface-brand: "Open Sans";
   --md-ref-typeface-plain: system-ui;
   font-family: "Google Sans";
   --md-text-button-label-text-color: var(--secondary-font-color);
   --md-dialog-headline-font: "Google Sans";
 }
 
-@import "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=settings";
-
-*, *::before, *::after {
-    box-sizing: border-box;
+body {
+  margin: 0;
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-surface);
 }
 
-body {
-    margin: 0px;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  /* color: inherit; */
 }
 
 .code-block {
-    background-color: var(--md-sys-color-surface-container-high);
-    font-family: monospace;
-    font-size: 0.8rem;
-    padding: 2px 8px;
-    border-radius: 6px;
-    color: var(--secondary-font-color);
+  background-color: var(--md-sys-color-surface-container-high);
+  font-family: monospace;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: var(--secondary-font-color);
 }
 
 main {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    width: 100%;
-    padding: 0px 10px;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  padding: 0px 10px;
+  gap: 10px;
 }
 
 .material-symbols-outlined {
   font-variation-settings:
-  'FILL' 0,
-  'wght' 400,
-  'GRAD' 0,
-  'opsz' 24
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
 }
