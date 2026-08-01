@@ -39,11 +39,10 @@
 
 .guide-title {
   flex: 1;
-  font-weight: 500;
+  font-weight: 700;
   font-size: 1rem;
   background: none;
   border: none;
-  font-family: "Google Sans";
   color: var(--md-sys-color-on-surface);
   padding: 4px;
   border-radius: 6px;
@@ -274,4 +273,15 @@
   --md-text-button-hover-icon-color: var(--md-sys-color-primary);
   --md-text-button-pressed-label-text-color: var(--md-sys-color-primary);
   --md-text-button-pressed-icon-color: var(--md-sys-color-primary);
+}
+
+.progress-pct {
+  font-family: "Google Sans", sans-serif;
+}
+
+.guide-title,
+.milestone-title,
+.guide-task-title,
+.task-title {
+  font-family: "PT Serif", serif;
 }

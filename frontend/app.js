@@ -287,7 +287,21 @@ async function createNewTask() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ due: today }),
     });
+    tasksLoaded = false;
     await renderTasks(canvasLoaded);
+    const newCard = document.querySelector("#taskList .card:last-child");
+    if (newCard) {
+      newCard.style.opacity = "0";
+      newCard.style.transform = "translateX(-20px)";
+      newCard.style.transition = "none";
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          newCard.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+          newCard.style.opacity = "1";
+          newCard.style.transform = "translateX(0)";
+        });
+      });
+    }
   } catch (err) {
     console.error("createNewTask error:", err);
   }
@@ -704,9 +718,12 @@ async function renderGreeters() {
 
   const evening = [
     `Good evening, ${settings.nickname}.`,
-    `Winding down, ${settings.nickname}.`,
-    `Ready for bed, ${settings.nickname}.`,
+    `Winding down, ${settings.nickname}?`,
+    `Ready for bed, ${settings.nickname}?`,
     `Still grinding, ${settings.nickname}?`,
+    `It's getting late, ${settings.nickname}.`,
+    `Another day down, ${settings.nickname}`,
+    `Finished all your homework, ${settings.nickname}?`,
     `Getting closer to your hopes and dreams, ${settings.nickname}?`,
     `It's not like I wanted to greet you or anything, ${settings.nickname}!`,
   ];
@@ -971,8 +988,17 @@ function initTaskListeners() {
     if (!taskToDelete) return;
     document.querySelector("#delete-confirm").close();
 
+    const cardEl = document.querySelector(`.card[data-id="${taskToDelete}"]`);
+    if (cardEl) {
+      cardEl.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+      cardEl.style.opacity = "0";
+      cardEl.style.transform = "translateX(20px)";
+      await new Promise((r) => setTimeout(r, 300));
+    }
+
     await fetch("/api/userdata/tasks/" + taskToDelete, { method: "DELETE" });
 
+    tasksLoaded = false;
     taskToDelete = null;
     await renderTasks(canvasLoaded);
   });
