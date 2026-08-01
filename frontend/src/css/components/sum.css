@@ -77,17 +77,13 @@
 
 .overflow-tooltip {
   display: none;
-  position: absolute;
-  bottom: unset;
-  top: 50%;
-  left: 36px;
-  transform: translateY(-50%);
+  position: fixed;
   background: white;
   border: 1px solid #ccc;
   border-radius: 8px;
   padding: 8px;
   min-width: 160px;
-  z-index: 100;
+  z-index: 1000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   font-size: 12px;
   flex-direction: column;

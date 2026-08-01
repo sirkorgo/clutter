@@ -171,8 +171,20 @@ md-outlined-text-field {
     padding: 1px;
   }
 
+  .code-block {
+    display: none;
+  }
+
   .content-area {
     padding: 10px;
+    overflow-x: hidden;
+  }
+
+  #activityGrid {
+    overflow-x: auto;
+    height: fit-content;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
   }
 
   .task-toolbar {

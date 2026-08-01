@@ -14,6 +14,10 @@ let activeTypeGuideId = null;
 let activeTypeMsId = null;
 let activeTypeTaskId = null;
 let activeTypeContext = null;
+let canvasTasks = [];
+let canvasLoaded = false;
+let canvasLastFetch = null;
+const CANVAS_REFRESH_MS = 5 * 60 * 1000;
 
 // settings api
 async function getSettings() {
@@ -128,17 +132,34 @@ async function renderActivityGrid() {
 
   // overflow tooltip toggle
   container.querySelectorAll(".task-cell.overflow").forEach((cell) => {
-    cell.addEventListener("mouseenter", () => cell.querySelector(".overflow-tooltip").classList.add("visible"));
+    cell.addEventListener("mouseenter", (e) => {
+      const tooltip = cell.querySelector(".overflow-tooltip");
+      const rect = cell.getBoundingClientRect();
+      tooltip.style.top = `${rect.top}px`;
+      tooltip.style.left = `${rect.right + 8}px`;
+      tooltip.classList.add("visible");
+    });
     cell.addEventListener("mouseleave", () => cell.querySelector(".overflow-tooltip").classList.remove("visible"));
   });
 }
 // canvas integration
-async function getCanvasTasks() {
+async function pullCanvasTasks() {
+  const settings = await getSettings();
+  if (!settings.canvas.apiKey) return [];
   const res = await fetch("/api/integrations/canvas/sync", { method: "POST" });
   const taskJSON = await res.json();
-  return taskJSON.map((task) => ({ ...task, canvas: true, id: task.id.toString() }));
+  canvasTasks = taskJSON.map((task) => ({ ...task, canvas: true, id: task.id.toString() }));
+  canvasLoaded = true;
+  canvasLastFetch = Date.now();
+  return canvasTasks;
 }
 
+async function getCanvasTasks() {
+  const now = Date.now();
+  const needsRefresh = !canvasLoaded || (canvasLastFetch && now - canvasLastFetch > CANVAS_REFRESH_MS);
+  if (needsRefresh) await pullCanvasTasks();
+  return canvasTasks;
+}
 // tasks api
 let tasks = [];
 let tasksLoaded = false;
@@ -153,16 +174,26 @@ async function getTasks() {
 }
 
 async function renderTasks(includeCanvas = false) {
-  tasksLoaded = false;
   const taskData = await getTasks();
   const settings = await getSettings();
   const canvasData = includeCanvas && settings.canvas.apiKey ? await getCanvasTasks() : [];
   const allTasks = [...taskData, ...canvasData];
 
   allTasks.sort((a, b) => {
-    if (!a.due) return 1;
-    if (!b.due) return -1;
-    return new Date(a.due) - new Date(b.due);
+    // separate done and undone
+    if (a.done !== b.done) return a.done ? 1 : -1;
+
+    if (!a.done) {
+      // incomplete: upcoming first (earliest due date first)
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return new Date(a.due) - new Date(b.due);
+    } else {
+      // complete: newest due date first
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return new Date(b.due) - new Date(a.due);
+    }
   });
 
   const taskList = document.querySelector("#taskList");
@@ -250,12 +281,13 @@ async function createNewTask() {
   isCreatingTask = true;
 
   try {
+    const today = new Date().toISOString().split("T")[0];
     await fetch("/api/userdata/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ due: today }),
     });
-    await renderTasks();
+    await renderTasks(canvasLoaded);
   } catch (err) {
     console.error("createNewTask error:", err);
   }
@@ -716,41 +748,35 @@ async function renderGreeters() {
 
 async function runPageScripts(hash) {
   if (hash === "tasks") {
-    const settings = await getSettings();
-    const filters = settings.defaultFilters;
+    if (!tasksLoaded) {
+      const settings = await getSettings();
+      const filters = settings.defaultFilters;
 
-    document.querySelector('[label="Incomplete"]').selected = filters.undone;
-    document.querySelector('[label="Completed"]').selected = filters.done;
-    document.querySelector('[label="Canvas"]').selected = filters.canvas;
-    document.querySelector('[label="Clutter"]').selected = filters.clutter;
-
-    await renderTasks();
-
-    if (settings.canvas.apiKey) {
-      await renderTasks(true);
+      document.querySelector('[label="Incomplete"]').selected = filters.undone;
+      document.querySelector('[label="Completed"]').selected = filters.done;
+      document.querySelector('[label="Canvas"]').selected = filters.canvas;
+      document.querySelector('[label="Clutter"]').selected = filters.clutter;
     }
+
+    await renderTasks(canvasLoaded);
   }
 
   if (hash === "guides") {
-    guidesLoaded = false;
-    await renderActiveGuides();
     document.querySelector("#active-guide-btn").selected = true;
     document.querySelector("#archived-guide-btn").selected = false;
+    if (!guidesLoaded) {
+      await renderActiveGuides();
+    }
   }
 
   if (hash === "summary") {
-    await getTasks(); // preload so renderGreeters has data
-    await renderActivityGrid();
-    renderGreeters();
-
-    const settings = await getSettings();
-    if (settings.canvas.apiKey) {
-      const canvasTasks = await getCanvasTasks();
-      await renderActivityGrid(canvasTasks);
+    await getTasks();
+    if (!document.querySelector("#sumpage-greet").innerHTML) {
+      renderGreeters();
     }
+    await renderActivityGrid();
   }
 }
-
 window.addEventListener("hashchange", showPage);
 
 // init
@@ -842,7 +868,7 @@ function initTaskListeners() {
       }),
     }).then(() => {
       tasksLoaded = false;
-      renderTasks();
+      renderTasks(canvasLoaded);
     });
   });
 
@@ -852,7 +878,7 @@ function initTaskListeners() {
 
   document.querySelector(".content-area").addEventListener("click", (event) => {
     if (event.target.tagName !== "MD-FILTER-CHIP") return;
-    setTimeout(() => renderTasks(), 50);
+    setTimeout(() => renderTasks(canvasLoaded), 50);
   });
 
   document.querySelector("#taskList").addEventListener("focusout", (event) => {
@@ -868,7 +894,7 @@ function initTaskListeners() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [field]: value }),
-    }).then(() => renderTasks());
+    }).then(() => renderTasks(canvasLoaded));
   });
 
   document.querySelector("#taskList").addEventListener("change", (event) => {
@@ -881,7 +907,23 @@ function initTaskListeners() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ done: event.target.checked }),
-    }).then(() => setTimeout(() => renderTasks(), 500));
+    }).then(() => {
+      const t = tasks.find((t) => t.id === taskId);
+      if (t) t.done = event.target.checked;
+
+      const filters = {
+        notdone: document.querySelector('[label="Incomplete"]').selected,
+        done: document.querySelector('[label="Completed"]').selected,
+      };
+
+      // if incomplete filter is on and task was just completed, animate it out
+      if (filters.notdone && !filters.done && event.target.checked) {
+        card.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+        card.style.opacity = "0";
+        card.style.transform = "translateX(20px)";
+        setTimeout(() => renderTasks(canvasLoaded), 350);
+      }
+    });
   });
 
   document.querySelector("#taskList").addEventListener("change", (event) => {
@@ -889,12 +931,26 @@ function initTaskListeners() {
     const card = event.target.closest(".card");
     if (!card.classList.contains("canvas-task")) return;
     const taskId = card.dataset.id;
-
     fetch("/api/integrations/canvas/done/" + taskId, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ done: event.target.checked }),
-    }).then(() => setTimeout(() => renderTasks(), 500));
+    }).then(() => {
+      const ct = canvasTasks.find((t) => t.id === taskId);
+      if (ct) ct.done = event.target.checked;
+
+      const filters = {
+        notdone: document.querySelector('[label="Incomplete"]').selected,
+        done: document.querySelector('[label="Completed"]').selected,
+      };
+
+      if (filters.notdone && !filters.done && event.target.checked) {
+        card.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+        card.style.opacity = "0";
+        card.style.transform = "translateX(20px)";
+        setTimeout(() => renderTasks(canvasLoaded), 350);
+      }
+    });
   });
 
   document.querySelector("#taskList").addEventListener("click", (event) => {
@@ -918,7 +974,7 @@ function initTaskListeners() {
     await fetch("/api/userdata/tasks/" + taskToDelete, { method: "DELETE" });
 
     taskToDelete = null;
-    await renderTasks();
+    await renderTasks(canvasLoaded);
   });
 }
 
@@ -1212,7 +1268,7 @@ document.querySelector("#task-type-menu").addEventListener("click", async (event
         body: JSON.stringify({ partial: false, done: false }),
       });
       tasksLoaded = false;
-      await renderTasks();
+      await renderTasks(canvasLoaded);
     }
     if (item.id === "task-partial") {
       await fetch(`/api/userdata/tasks/${activeTypeTaskId}`, {
@@ -1221,7 +1277,7 @@ document.querySelector("#task-type-menu").addEventListener("click", async (event
         body: JSON.stringify({ partial: true, partialCurrent: 0, partialTotal: 0, done: false }),
       });
       tasksLoaded = false;
-      await renderTasks();
+      await renderTasks(canvasLoaded);
     }
     activeTypeTaskId = null;
     activeTypeContext = null;
@@ -1482,6 +1538,11 @@ function initAccountListeners() {
 
 // load
 document.addEventListener("DOMContentLoaded", async () => {
+  pullCanvasTasks().then(() => {
+    const hash = window.location.hash.replace("#", "") || "summary";
+    if (hash === "tasks") renderTasks(true);
+    if (hash === "summary") renderActivityGrid(canvasTasks);
+  });
   tabs = document.querySelector("md-tabs");
   tabs.addEventListener("change", () => {
     const pgNames = ["summary", "tasks", "guides"];
